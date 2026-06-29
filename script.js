@@ -35,6 +35,12 @@ function cacheDOMSelectors() {
   DOM.boardContainer = $('#board-container');
   DOM.projectTitle = $('#project-title');
   DOM.navbarProjectTitle = $('#navbar-project-title');
+
+   // SELECTORES PARA BUSCADORES===========================
+DOM.searchProjectsInput = $('#search-projects-input');
+DOM.clearProjectsBtn = $('#clear-projects-btn');
+DOM.searchTasksInput = $('#search-tasks-input');
+DOM.clearTasksBtn = $('#clear-tasks-btn');
 }
 
 /* ============================================================

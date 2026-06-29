@@ -1,65 +1,16 @@
-/* 1. Esperar a que el HTML esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
+    const formTarea = document.getElementById('form-tarea');
+    const listaTareas = document.getElementById('lista-tareas');
     
-    // 2. Capturar los elementos del DOM que vamos a usar
-    const formTarea = document.getElementById('form-tarea');
-    const listaTareas = document.getElementById('lista-tareas');
+    // Cargar el nombre del proyecto desde localStorage
+    const txtProyectoNav = document.getElementById('nombre-proyecto-nav');
+    const txtProyectoMain = document.getElementById('nombre-proyecto-main');
+    const tituloGuardado = localStorage.getItem('tituloProyecto');
 
-    // Limpiar los bloques de ejemplo que dejamos en el HTML para arrancar vacíos
-    listaTareas.innerHTML = '';
-
-    // 3. Escuchar el evento 'submit' cuando se envía el formulario
-    formTarea.addEventListener('submit', (evento) => {
-        // Evitamos que la página se recargue (comportamiento por defecto de los formularios)
-        evento.preventDefault();
-
-        // 4. Capturar los valores de cada input
-        const info = document.getElementById('info-tarea').value;
-        const titulo = document.getElementById('titulo-tarea').value;
-        const descripcion = document.getElementById('desc-tarea').value;
-        const fecha = document.getElementById('fecha-tarea').value;
-        const tipoPieza = document.getElementById('tipo-pieza').value;
-        const estadoSelect = document.getElementById('estado-tarea');
-        
-        // Obtenemos el texto visible del estado (ej: ".En proceso") en vez del value
-        const estadoTexto = estadoSelect.options[estadoSelect.selectedIndex].text;
-
-        // 5. Crear el HTML para la nueva tarjeta de tarea
-        const nuevaTarjeta = document.createElement('div');
-        // Le agregamos las mismas clases de Bootstrap y CSS que ya usamos
-        nuevaTarjeta.className = 'p-3 bg-light rounded-3 shadow-sm d-flex flex-column gap-1 animate-fade-in';
-        
-        // Estructura interna de la tarjeta con los datos capturados
-        nuevaTarjeta.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center">
-                <strong class="text-dark">${titulo}</strong>
-                <span class="badge bg-secondary text-capitalize" style="font-size: 11px;">${tipoPieza}</span>
-            </div>
-            ${descripcion ? `<p class="text-muted small mb-1">${descripcion}</p>` : ''}
-            <div class="d-flex justify-content-between align-items-center mt-2" style="font-size: 12px;">
-                <span class="text-primary fw-semibold">${estadoTexto}</span>
-                ${fecha ? `<span class="text-muted">📅 ${formatearFecha(fecha)}</span>` : ''}
-            </div>
-        `;
-
-        // 6. Agregar la tarjeta al contenedor de la derecha
-        listaTareas.appendChild(nuevaTarjeta);
-
-        // 7. Resetear el formulario para que quede limpio para la próxima tarea
-        formTarea.reset();
-    });
-
-    // Función auxiliar para que la fecha se vea más linda (DD/MM/AAAA)
-    function formatearFecha(fechaInput) {
-        if (!fechaInput) return '';
-        const partes = fechaInput.split('-'); // El input date devuelve YYYY-MM-DD
-        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    if (tituloGuardado) {
+        if (txtProyectoNav) txtProyectoNav.textContent = tituloGuardado;
+        if (txtProyectoMain) txtProyectoMain.textContent = tituloGuardado.toUpperCase();
     }
-});
-*/
-document.addEventListener('DOMContentLoaded', () => {
-    const formTarea = document.getElementById('form-tarea');
-    const listaTareas = document.getElementById('lista-tareas');
     
     // 1. El proyecto arranca sin tareas cargadas (Array vacío)
     let tareas = [];

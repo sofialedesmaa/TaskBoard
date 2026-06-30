@@ -36,11 +36,11 @@ function cacheDOMSelectors() {
   DOM.projectTitle = $('#project-title');
   DOM.navbarProjectTitle = $('#navbar-project-title');
 
-   // SELECTORES PARA BUSCADORES===========================
-DOM.searchProjectsInput = $('#search-projects-input');
-DOM.clearProjectsBtn = $('#clear-projects-btn');
-DOM.searchTasksInput = $('#search-tasks-input');
-DOM.clearTasksBtn = $('#clear-tasks-btn');
+  // SELECTORES PARA BUSCADORES===========================
+  DOM.searchProjectsInput = $('#search-projects-input');
+  DOM.clearProjectsBtn = $('#clear-projects-btn');
+  DOM.searchTasksInput = $('#search-tasks-input');
+  DOM.clearTasksBtn = $('#clear-tasks-btn');
 }
 
 /* ============================================================
@@ -521,6 +521,12 @@ function initEditableFields() {
 
 function initBoard() {
   cacheDOMSelectors();
+
+  // Nombre de usuario en la página de inicio
+  const nombre = localStorage.getItem('nombre_usuario');
+  const elNombre = document.getElementById('nombreUsuario');
+  if (nombre && elNombre) elNombre.textContent = nombre;
+
   if (!loadFromLocalStorage()) {
     boardState.columns = DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] }));
     saveToLocalStorage();
@@ -580,7 +586,4 @@ function initSearchListeners() {
 
 // Inicializar buscadores
 initSearchListeners();
-
-
-
 

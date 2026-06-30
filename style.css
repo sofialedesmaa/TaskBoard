@@ -45,3 +45,24 @@ body, .modal, button, input, textarea, select {
 .btn-dashed    { border-style: dashed !important; }
 .icon-xs       { font-size: 0.75rem; }
 .text-badge-sm { font-size: 0.65rem; }
+
+
+/* ... Todos tus estilos actuales del proyecto ... */
+/* ... La última llave del código que ya tenías ... */
+}
+
+
+/* --- PERSONALIZACIÓN DE BOOTSTRAP PARA EL BUSCADOR --- */
+.search-box {
+    max-width: 450px;
+    background-color: #D8F3EC;
+    border: 2px solid #A9E5D8;
+    transition: all 0.25s ease;
+}
+
+/* El efecto de iluminación que Bootstrap no tiene por defecto */
+.search-box:focus-within {
+    box-shadow: 0 0 8px rgba(169, 229, 216, 0.7);
+    background-color: #ffffff;
+    border-color: #89d4c4 !important;
+}

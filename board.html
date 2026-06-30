@@ -32,6 +32,27 @@
             <img src="Imagenes/LOGO.png" alt="Logo" width="50" height="50">
         </div>
     </nav>
+    
+    <div class="container-fluid mt-3 d-flex justify-content-center">
+    <div class="search-box">
+        <span class="search-icon">
+            <i class="bi bi-search"></i>
+        </span>
+
+        <input 
+            type="text" 
+            id="search-tasks-input" 
+            class="search-input" 
+            placeholder="Buscar tareas en este tablero..."
+        >
+
+        <button 
+            id="clear-tasks-btn" 
+            class="clear-btn">
+            ✕
+        </button>
+    </div>
+</div>
 
     <section class="bg-white pb-4">
         <div class="container-fluid">
@@ -48,6 +69,7 @@
                 <!-- Columnas renderizadas dinámicamente por script.js -->
             </div>
         </div>
+        
     </section>
     
 </body>

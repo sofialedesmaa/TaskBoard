@@ -533,6 +533,7 @@ function initBoard() {
 initBoard();
 
 //LOGICA DE FILTRADO PARA BUSCADORES ============
+//===============================================
 
 function initSearchListeners() {
   // 1. Filtrado en la Home
@@ -579,5 +580,7 @@ function initSearchListeners() {
 
 // Inicializar buscadores
 initSearchListeners();
+
+
 
 

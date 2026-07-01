@@ -379,3 +379,8 @@ textarea.form-control {
     .flow-arrow-2 { margin-left: 125px; }
     .flow-arrow-3 { margin-left: 205px; }
 }
+/* PORQUE SE CAMBIA EL COLOR DE FONDO DE EDITORTAREAS */
+body.bg-editor {
+    background-color: #ffffff !important;
+}
+

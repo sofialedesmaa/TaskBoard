@@ -1,4 +1,333 @@
 :root {
+    --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+    --color-brand-blue: #184079;
+    --color-brand-blue-hover: #11305c;
+    --navbar-height: 56px;
+    --sidebar-width: 160px;
+    --c-brief: #4D7C8A;
+    --c-proceso: #7F9C96;
+    --c-revision: #CBDF90;
+    --c-aprobado: #8FAD88;
+}
+
+body,
+.modal,
+button,
+input,
+textarea,
+select {
+    font-family: var(--font-primary);
+}
+
+.dashboard-body {
+    background-color: #f0f2f5;
+}
+
+.text-primary-brand {
+    color: var(--color-brand-blue);
+}
+
+.dashboard-navbar {
+    background-color: var(--color-brand-blue);
+    height: var(--navbar-height);
+    z-index: 100;
+}
+
+.avatar {
+    cursor: pointer;
+    height: 36px;
+    width: 36px;
+}
+
+.dashboard-sidebar {
+    background-color: #eef0f4;
+    top: var(--navbar-height);
+    width: var(--sidebar-width);
+}
+
+.nav-link {
+    color: #444;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 10px 20px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.nav-link:hover {
+    background-color: #dde3ef;
+    color: var(--color-brand-blue);
+}
+
+.dashboard-main {
+    margin-left: var(--sidebar-width);
+    margin-top: var(--navbar-height);
+    min-height: calc(100vh - var(--navbar-height));
+    padding: 36px 40px;
+}
+
+.project-card {
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    width: 200px;
+}
+
+.project-card:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    transform: translateY(-3px);
+}
+
+.project-card-cover {
+    height: 110px;
+}
+
+.stat-dot {
+    height: 8px;
+    width: 8px;
+}
+
+.project-card-new {
+    background-color: transparent;
+    border: 2px dashed #b0bac9;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    width: 200px;
+}
+
+.project-card-new:hover {
+    background-color: rgba(24, 64, 121, 0.04);
+    border-color: var(--color-brand-blue);
+}
+
+.new-project-icon {
+    background-color: #dde3ef;
+    color: #5a7ab5;
+    font-size: 1.4rem;
+    height: 44px;
+    transition: background-color 0.2s ease;
+    width: 44px;
+}
+
+.project-card-new:hover .new-project-icon {
+    background-color: #c4d0e8;
+}
+
+.navbarColor {
+    background-color: var(--color-brand-blue);
+}
+
+.colorBrief {
+    background-color: var(--c-brief);
+}
+
+.colorProceso {
+    background-color: var(--c-proceso);
+}
+
+.colorRevision {
+    background-color: var(--c-revision);
+}
+
+.colorAprobado {
+    background-color: var(--c-aprobado);
+}
+
+.textColorProceso {
+    color: var(--c-proceso);
+}
+
+.color-swatch {
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+}
+
+.board-min-height {
+    min-height: 70vh;
+}
+
+.column-width {
+    min-width: 300px;
+    max-width: 300px;
+}
+
+.column-tasks-scroll {
+    max-height: 60vh;
+}
+
+.editable-title {
+    outline: none;
+    min-width: 50px;
+}
+
+.task-card {
+    cursor: grab;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-dashed {
+    border-style: dashed !important;
+}
+
+.icon-xs {
+    font-size: 0.75rem;
+}
+
+.text-badge-sm {
+    font-size: 0.65rem;
+}
+/* ==========================================================================
+   1. VARIABLES DE CSS (Diseño y consistencia de marca)
+   ========================================================================== */
+:root {
+    /* Paleta de colores de Figma */
+    --color-bg-primary: #7F9C96;
+    /* Verde grisáceo de fondo */
+    --color-card-bg: #F6F6F6;
+    /* Fondo gris claro/off-white */
+    --color-text-dark: #333333;
+    /* Texto oscuro principal */
+    --color-text-muted: #495057;
+    /* Texto secundario de etiquetas */
+    --color-brand-blue: #184079;
+    /* Azul marino de botones y enlaces */
+    --color-brand-blue-hover: #11305c;
+    /* Azul oscuro para hover */
+
+    /* Fuentes y tipografía */
+    --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+
+    /* Bordes, Sombras y Radios */
+    --radius-card: 20px;
+    --radius-pill: 50rem;
+    --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.08);
+    --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+
+    /* Transiciones */
+    --transition-fast: all 0.2s ease;
+}
+
+/* ==========================================================================
+   2. ESTILOS BASE (Reset y selectores globales)
+   ========================================================================== */
+body {
+    background-color: var(--color-bg-primary);
+    font-family: var(--font-primary);
+    min-height: 100vh;
+    margin: 0;
+}
+
+/* ==========================================================================
+   3. ESTRUCTURA Y DISEÑO (Contenedores)
+   ========================================================================== */
+.login-card {
+    background-color: var(--color-card-bg);
+    border: none;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+    max-width: 670px;
+    width: 100%;
+    min-height: 420px;
+    padding-top: 80px;
+    /* Compensa la superposición del logo flotante */
+}
+
+/* ==========================================================================
+   4. COMPONENTES (Elementos de la interfaz)
+   ========================================================================== */
+
+/* --- Logo flotante (Gatito) --- */
+.login-logo-container {
+    width: 130px;
+    /* Diámetro exacto de Figma (130px) */
+    height: 130px;
+    margin-bottom: -65px;
+    /* Hace que se superponga exactamente a la mitad (130 / 2) */
+    position: relative;
+    z-index: 10;
+}
+
+.login-logo-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* --- Formularios: Etiquetas --- */
+.form-label-custom {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    margin-left: 12px;
+}
+
+/* --- Formularios: Entradas (Inputs tipo píldora) --- */
+.form-control-custom {
+    border-radius: var(--radius-pill);
+    border: 1px solid #ced4da;
+    padding: 10px 20px;
+    background-color: #ffffff;
+    box-shadow: var(--shadow-inset);
+    transition: var(--transition-fast);
+}
+
+.form-control-custom:focus {
+    border-color: var(--color-bg-primary);
+    box-shadow: 0 0 0 0.25rem rgba(127, 156, 150, 0.25);
+    outline: 0;
+}
+
+/* --- Botón principal de ingreso/registro --- */
+.btn-ingresar {
+    background-color: var(--color-brand-blue);
+    color: white;
+    border: none;
+    font-weight: 600;
+    padding: 10px 40px;
+    border-radius: var(--radius-pill);
+    transition: var(--transition-fast);
+}
+
+.btn-ingresar:hover {
+    background-color: var(--color-brand-blue-hover);
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* --- Enlaces de navegación del Login --- */
+.login-link {
+    color: var(--color-brand-blue);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: var(--transition-fast);
+}
+
+.login-link:hover {
+    text-decoration: underline;
+}
+
+/* --- Modales personalizados --- */
+.modal-content-custom {
+    border-radius: var(--radius-card);
+    border: none;
+    background-color: var(--color-card-bg);
+    box-shadow: var(--shadow-soft);
+}
+
+.modal-title-custom {
+    font-size: 1.15rem;
+    letter-spacing: 0.5px;
+    color: var(--color-text-dark);
+}
+:root {
     --font: 'Inter', sans-serif;
     --c-navbar: #184079;
     --c-brief: #4D7C8A;

@@ -31,6 +31,16 @@
         </div>
     </nav>
 
+    <div class="container-fluid mt-3 d-flex justify-content-center">
+        <div class="input-group search-box rounded-pill overflow-hidden">
+            <span class="input-group-text bg-transparent border-0 text-secondary ps-3">
+                <i class="bi bi-search"></i>
+            </span>
+            <input type="text" id="search-tasks-input" class="form-control bg-transparent border-0 shadow-none ps-1" placeholder="Buscar tareas en este tablero...">
+            <button id="clear-tasks-btn" class="btn btn-link text-decoration-none text-muted border-0 pe-3" style="display: none;">✕</button>
+        </div>
+    </div>
+
     <section class="bg-white pb-4">
         <div class="container-fluid">
             <div class="row">
@@ -46,6 +56,7 @@
                 <!-- Columnas renderizadas dinámicamente por script.js -->
             </div>
         </div>
+        
     </section>
     
 </body>

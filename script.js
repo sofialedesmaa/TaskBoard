@@ -35,6 +35,12 @@ function cacheDOMSelectors() {
   DOM.boardContainer = $('#board-container');
   DOM.projectTitle = $('#project-title');
   DOM.navbarProjectTitle = $('#navbar-project-title');
+
+  // SELECTORES PARA BUSCADORES===========================
+  DOM.searchProjectsInput = $('#search-projects-input');
+  DOM.clearProjectsBtn = $('#clear-projects-btn');
+  DOM.searchTasksInput = $('#search-tasks-input');
+  DOM.clearTasksBtn = $('#clear-tasks-btn');
 }
 
 /* ============================================================
@@ -515,6 +521,12 @@ function initEditableFields() {
 
 function initBoard() {
   cacheDOMSelectors();
+
+  // Nombre de usuario en la página de inicio
+  const nombre = localStorage.getItem('nombre_usuario');
+  const elNombre = document.getElementById('nombreUsuario');
+  if (nombre && elNombre) elNombre.textContent = nombre;
+
   if (!loadFromLocalStorage()) {
     boardState.columns = DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] }));
     saveToLocalStorage();
@@ -525,6 +537,56 @@ function initBoard() {
 
 // Arranque
 initBoard();
+
+//LOGICA DE FILTRADO PARA BUSCADORES ============
+//===============================================
+
+function initSearchListeners() {
+  // 1. Filtrado en la Home
+  if (DOM.searchProjectsInput) {
+    DOM.searchProjectsInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      DOM.clearProjectsBtn.style.display = query.length > 0 ? 'block' : 'none';
+
+      $$('.card, .project-card').forEach(card => {
+        if (card.classList.contains('column-width')) return;
+        const title = card.querySelector('h3, h4, .project-title')?.textContent.toLowerCase() || '';
+        card.style.display = title.includes(query) ? '' : 'none';
+      });
+    });
+
+    DOM.clearProjectsBtn.addEventListener('click', () => {
+      DOM.searchProjectsInput.value = '';
+      DOM.clearProjectsBtn.style.display = 'none';
+      DOM.searchProjectsInput.dispatchEvent(new Event('input'));
+      DOM.searchProjectsInput.focus();
+    });
+  }
+
+  // 2. Filtrado en el Board
+  if (DOM.searchTasksInput) {
+    DOM.searchTasksInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      DOM.clearTasksBtn.style.display = query.length > 0 ? 'block' : 'none';
+
+      $$('.task-card').forEach(card => {
+        const title = card.querySelector('.fw-medium.small')?.textContent.toLowerCase() || '';
+        card.style.display = title.includes(query) ? '' : 'none';
+      });
+    });
+
+    DOM.clearTasksBtn.addEventListener('click', () => {
+      DOM.searchTasksInput.value = '';
+      DOM.clearTasksBtn.style.display = 'none';
+      DOM.searchTasksInput.dispatchEvent(new Event('input'));
+      DOM.searchTasksInput.focus();
+    });
+  }
+}
+
+// Inicializar buscadores
+initSearchListeners();
+
 /* ============================================================
    1. CONSTANTES Y VARIABLES
    ============================================================ */

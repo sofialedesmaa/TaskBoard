@@ -45,3 +45,4 @@ if (tokenEsValido) {
         window.location.href = 'login.html';
     }
 }
+

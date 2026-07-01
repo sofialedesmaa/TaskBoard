@@ -142,3 +142,115 @@ body {
     letter-spacing: 0.5px;
     color: var(--color-text-dark);
 }
+:root {
+    --font: 'Inter', sans-serif;
+    --c-navbar: #184079;
+    --c-brief: #4D7C8A;
+    --c-proceso: #7F9C96;
+    --c-revision: #CBDF90;
+    --c-aprobado: #8FAD88;
+}
+
+body, .modal, button, input, textarea, select {
+    font-family: var(--font);
+}
+
+.navbarColor   { background-color: var(--c-navbar); }
+.colorBrief    { background-color: var(--c-brief); }
+.colorProceso  { background-color: var(--c-proceso); }
+.colorRevision { background-color: var(--c-revision); }
+.colorAprobado { background-color: var(--c-aprobado); }
+.textColorProceso { color: var(--c-proceso); }
+
+.color-swatch {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+}
+
+/* --- Board --- */
+
+.board-min-height { min-height: 70vh; }
+.column-width     { min-width: 300px; max-width: 300px; }
+.column-tasks-scroll { max-height: 60vh; }
+.editable-title   { outline: none; min-width: 50px; }
+
+.task-card {
+    cursor: grab;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-dashed    { border-style: dashed !important; }
+.icon-xs       { font-size: 0.75rem; }
+.text-badge-sm { font-size: 0.65rem; }
+:root {
+    --font: 'Inter', sans-serif;
+    --c-navbar: #184079;
+    --c-brief: #4D7C8A;
+    --c-proceso: #7F9C96;
+    --c-revision: #CBDF90;
+    --c-aprobado: #8FAD88;
+}
+
+body, .modal, button, input, textarea, select {
+    font-family: var(--font);
+}
+
+.navbarColor   { background-color: var(--c-navbar); }
+.colorBrief    { background-color: var(--c-brief); }
+.colorProceso  { background-color: var(--c-proceso); }
+.colorRevision { background-color: var(--c-revision); }
+.colorAprobado { background-color: var(--c-aprobado); }
+.textColorProceso { color: var(--c-proceso); }
+
+/* Fondos Pastel con Opacidad (45% o #73 en Hex) para Landing y Tarjetas */
+.bg-brief-pastel    { background-color: #4D7C8A73; }
+.bg-proceso-pastel  { background-color: #7F9C9673; }
+.bg-revision-pastel { background-color: #CBDF9073; }
+.bg-aprobado-pastel { background-color: #8FAD8873; }
+
+/* Flujo Escalonado en Diagonal (Solo para tablets y escritorio) */
+@media (min-width: 768px) {
+    .flow-step-1 { margin-left: 0px; }
+    .flow-step-2 { margin-left: 80px; }
+    .flow-step-3 { margin-left: 160px; }
+    .flow-step-4 { margin-left: 240px; }
+    
+    .flow-arrow-1 { margin-left: 45px; }
+    .flow-arrow-2 { margin-left: 125px; }
+    .flow-arrow-3 { margin-left: 205px; }
+}
+
+.color-swatch {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+}
+
+/* --- Board --- */
+
+.board-min-height { min-height: 70vh; }
+.column-width     { min-width: 300px; max-width: 300px; }
+.column-tasks-scroll { max-height: 60vh; }
+.editable-title   { outline: none; min-width: 50px; }
+
+.task-card {
+    cursor: grab;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-dashed    { border-style: dashed !important; }
+.icon-xs       { font-size: 0.75rem; }
+.text-badge-sm { font-size: 0.65rem; }

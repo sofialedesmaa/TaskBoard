@@ -591,10 +591,23 @@ function initSearchListeners() {
             const query = e.target.value.toLowerCase().trim();
             DOM.clearTasksBtn.style.display = query.length > 0 ? 'block' : 'none';
 
-            $$('.task-card').forEach(card => {
-                const title = card.querySelector('.fw-medium.small')?.textContent.toLowerCase() || '';
-                card.style.display = title.includes(query) ? '' : 'none';
-            });
+           $$('.task-card').forEach(card => {
+    const title = card.querySelector('.fw-medium.small')?.textContent.toLowerCase() || '';
+
+    if (query === '') {
+        card.style.outline = '';
+        card.style.boxShadow = '';
+        return;
+    }
+
+    if (title.includes(query)) {
+        card.style.outline = '2px solid #0d6efd';
+        card.style.boxShadow = '0 0 10px rgba(13,110,253,.35)';
+    } else {
+        card.style.outline = '';
+        card.style.boxShadow = '';
+    }
+        });
         });
 
         DOM.clearTasksBtn.addEventListener('click', () => {

@@ -1,0 +1,92 @@
+/* Ajustes generales del cuerpo */
+body {
+    background-color: #fafafa;
+    color: #333333;
+    font-family: 'Inter', sans-serif;
+}
+
+/* 1. Encabezado / Navbar */
+.custom-navbar {
+    background-color: #1d4380;
+}
+
+.nav-link-custom {
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    transition: color 0.2s ease-in-out;
+}
+
+.nav-link-custom:hover {
+    color: #ffffff;
+}
+
+.logo-container {
+    width: 40px;
+    height: 40px;
+}
+
+.logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 2. Personalización de los Campos del Formulario */
+.form-control, .form-select {
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+/* Efecto cuando el usuario hace clic en un input */
+.form-control:focus, .form-select:focus {
+    border-color: #1d4380 !important;
+    box-shadow: 0 0 0 0.2rem rgba(29, 67, 128, 0.15) !important;
+    background-color: #ffffff !important; 
+}
+
+/* Estilo específico para el área de texto (Descripción) */
+textarea.form-control {
+    resize: none; 
+}
+
+/* 3. Botones de Acción */
+.btn-cancelar, .btn-crear {
+    min-width: 150px; 
+    background-color: #1d4380;
+    transition: transform 0.1s ease, background-color 0.2s;
+}
+
+/* Efecto al pasar el mouse por encima de los botones */
+.btn-cancelar:hover, .btn-crear:hover {
+    background-color: #153260 !important; 
+    transform: translateY(-1px); 
+}
+
+/* 4. Barra Lateral - Mis Tareas */
+aside {
+    min-height: 80vh; 
+}
+
+/* 5. Animación para las nuevas tareas */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* 6. Placeholders de Selects */
+.select-placeholder {
+    color: #a0a0a0 !important; 
+}
+
+/* Forzamos a que las opciones de la lista desplegable recuperen el color oscuro */
+.select-placeholder option {
+    color: #333333 !important;
+}
+
+/* Estilo opcional para que la opción deshabilitada se vea opaca dentro del menú */
+.placeholder-option {
+    color: #a0a0a0 !important;
+}

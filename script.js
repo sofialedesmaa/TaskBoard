@@ -16,7 +16,8 @@ const LABELS = [
     ['Banner', 'colorRevision text-dark']
 ].map(([name, badgeClass]) => ({ name, badgeClass }));
 
-let boardState = { columns: [], projectTitle: 'TITULO DEL PROYECTO' };
+let boardState = { columns: [], projectTitle: 'Titulo del proyecto 1' };
+let currentProjectId = null;
 let draggedTaskId = null;
 let draggedFromColumnId = null;
 
@@ -69,7 +70,18 @@ function cacheDOMSelectors() {
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const id = () => `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
-const saveToLocalStorage = () => localStorage.setItem(STORE, JSON.stringify(boardState));
+const saveToLocalStorage = () => {
+    if (!currentProjectId) return;
+    let projects = JSON.parse(localStorage.getItem('katban_projects')) || [];
+    let idx = projects.findIndex(p => p.id === currentProjectId);
+    if (idx >= 0) {
+        projects[idx].state = boardState;
+        projects[idx].lastModified = Date.now();
+    } else {
+        projects.push({ id: currentProjectId, state: boardState, lastModified: Date.now() });
+    }
+    localStorage.setItem('katban_projects', JSON.stringify(projects));
+};
 const byId = (items, itemId) => items.find(item => item.id === itemId);
 const make = (tag, className = '', html = '') => {
     const node = document.createElement(tag);
@@ -108,13 +120,87 @@ function logout() {
 /* ============================================================
    5. FUNCIONES — Persistencia
    ============================================================ */
+function migrateOldData() {
+    let oldState = localStorage.getItem('taskboard_state');
+    let projects = JSON.parse(localStorage.getItem('katban_projects')) || [];
+    if (oldState) {
+        try {
+            let parsedOld = JSON.parse(oldState);
+            projects.push({ id: id(), state: parsedOld, lastModified: Date.now() });
+            localStorage.removeItem('taskboard_state');
+            localStorage.setItem('katban_projects', JSON.stringify(projects));
+        } catch (e) {}
+    }
+}
+
 function loadFromLocalStorage() {
-    const saved = localStorage.getItem(STORE);
-    if (!saved) return false;
-    boardState = JSON.parse(saved);
-    if (!boardState.projectTitle) boardState.projectTitle = 'TITULO DEL PROYECTO';
-    normalizeDefaultColumnNames();
-    return true;
+    migrateOldData();
+    let projects = JSON.parse(localStorage.getItem('katban_projects')) || [];
+    
+    // Si no hay ningún proyecto, precargar los que el usuario espera ver
+    if (projects.length === 0) {
+        projects.push({
+            id: id(),
+            state: {
+                columns: DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] })),
+                projectTitle: 'Título del proyecto 1'
+            },
+            lastModified: Date.now() + 1000 // Para que aparezca primero
+        });
+        projects.push({
+            id: id(),
+            state: {
+                columns: DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] })),
+                projectTitle: 'Título del proyecto 2'
+            },
+            lastModified: Date.now()
+        });
+        localStorage.setItem('katban_projects', JSON.stringify(projects));
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const isHome = window.location.pathname.includes('home.html') || window.location.pathname.endsWith('/') || window.location.pathname.endsWith('PRUEBA3');
+    
+    if (isHome) return true;
+
+    if (params.get('new') === '1') {
+        const newProjId = id();
+        const newState = {
+            columns: DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] })),
+            projectTitle: 'Titulo del proyecto 1'
+        };
+        projects.push({ id: newProjId, state: newState, lastModified: Date.now() });
+        localStorage.setItem('katban_projects', JSON.stringify(projects));
+        
+        window.history.replaceState({}, '', window.location.pathname + '?id=' + newProjId);
+        currentProjectId = newProjId;
+        boardState = newState;
+        return true;
+    }
+
+    let reqId = params.get('id');
+    if (reqId) {
+        let proj = projects.find(p => p.id === reqId);
+        if (proj) {
+            currentProjectId = proj.id;
+            boardState = proj.state;
+            if (!boardState.projectTitle) boardState.projectTitle = 'Titulo del proyecto 1';
+            normalizeDefaultColumnNames();
+            return true;
+        }
+    }
+    
+    if (projects.length > 0) {
+        projects.sort((a,b) => (b.lastModified || 0) - (a.lastModified || 0));
+        currentProjectId = projects[0].id;
+        boardState = projects[0].state;
+        window.history.replaceState({}, '', window.location.pathname + '?id=' + currentProjectId);
+        if (!boardState.projectTitle) boardState.projectTitle = 'Titulo del proyecto 1';
+        normalizeDefaultColumnNames();
+        return true;
+    }
+
+    return false;
 }
 
 function normalizeDefaultColumnNames() {
@@ -198,7 +284,7 @@ function createColumnElement(column) {
       <i class="bi bi-plus"></i> Añadir tarea
     </button>`);
     $('[data-action="add-task"]', footer).addEventListener('click', () => {
-        location.href = `editortareas.html?columnId=${encodeURIComponent(column.id)}`;
+        location.href = `editortareas.html?id=${currentProjectId}&columnId=${encodeURIComponent(column.id)}`;
     });
 
     col.append(header, body, footer);
@@ -422,10 +508,10 @@ function showAddTaskForm(columnId, bodyElement) {
     title.focus();
 }
 
-function addTask(columnId, title, labels = [], dueDate = null) {
+function addTask(columnId, title, labels = [], dueDate = null, description = '') {
     const column = byId(boardState.columns, columnId);
     if (!column) return;
-    column.tasks.push({ id: id(), title, labels, dueDate });
+    column.tasks.push({ id: id(), title, labels, dueDate, description });
     saveToLocalStorage();
     renderBoard();
 }
@@ -547,7 +633,7 @@ function updateNavbarProjectTitle() {
     const title = DOM.projectTitle;
     const navbar = DOM.navbarProjectTitle;
     if (title) {
-        const text = title.textContent.trim() || 'TITULO DEL PROYECTO';
+        const text = title.textContent.trim() || 'Titulo del proyecto 1';
         if (navbar) navbar.textContent = text;
         boardState.projectTitle = text;
         saveToLocalStorage();
@@ -622,20 +708,84 @@ function initSearchListeners() {
 function renderEditorTasks() {
     if (!DOM.listaTareas) return;
     DOM.listaTareas.innerHTML = '';
-    const allTasks = boardState.columns.flatMap(c => c.tasks.map(t => ({...t, colName: c.name, colColor: c.colorClass})));
-    allTasks.forEach(task => {
-        const card = make('div', 'card shadow-sm border-0 mb-3');
-        card.innerHTML = `
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="mb-0 fw-semibold text-dark">${task.title}</h6>
-                    <span class="badge ${task.colColor} text-dark border rounded-pill small">${task.colName}</span>
-                </div>
-                ${task.labels && task.labels.length ? `<div class="mb-2">${task.labels.map(l => `<span class="badge bg-secondary opacity-75 me-1">${l}</span>`).join('')}</div>` : ''}
-                ${task.dueDate ? `<small class="text-muted d-block mt-2"><i class="bi bi-calendar"></i> ${task.dueDate.split('-').reverse().join('/')}</small>` : ''}
+    const allTasks = boardState.columns.flatMap(c => c.tasks.map(t => ({...t, colName: c.name, colColor: c.colorClass, colId: c.id})));
+    
+    if (allTasks.length === 0) {
+        DOM.listaTareas.innerHTML = `
+            <div class="text-center my-5 text-muted">
+                <p class="fs-4 mb-1">📋</p>
+                <p class="small fw-medium">No hay tareas cargadas todavía.</p>
             </div>
         `;
-        DOM.listaTareas.appendChild(card);
+        return;
+    }
+
+    allTasks.forEach(task => {
+        const tarjeta = make('div', 'p-3 bg-body-secondary border rounded-3 shadow-sm d-flex flex-column gap-1 animate-fade-in mb-3');
+        
+        tarjeta.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong class="text-dark d-block">${task.title}</strong>
+                    ${task.labels && task.labels.length ? `<span class="badge bg-secondary text-capitalize mt-1" style="font-size: 10px;">${task.labels[0]}</span>` : ''}
+                </div>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-primary border-0 p-1 btn-editar" data-col="${task.colId}" data-id="${task.id}" title="Editar">✏️</button>
+                    <button class="btn btn-sm btn-outline-danger border-0 p-1 btn-eliminar" data-col="${task.colId}" data-id="${task.id}" title="Eliminar">❌</button>
+                </div>
+            </div>
+            ${task.description ? `<p class="text-muted small my-2">${task.description}</p>` : ''}
+            <div class="d-flex justify-content-between align-items-center mt-2" style="font-size: 12px;">
+                <span class="text-primary fw-semibold">${task.colName}</span>
+                ${task.dueDate ? `<span class="text-muted">📅 ${task.dueDate.split('-').reverse().join('/')}</span>` : ''}
+            </div>
+        `;
+        DOM.listaTareas.appendChild(tarjeta);
+    });
+
+    document.querySelectorAll('.btn-eliminar').forEach(btn => {
+        btn.addEventListener('click', e => {
+            const taskId = e.target.closest('button').dataset.id;
+            const colId = e.target.closest('button').dataset.col;
+            if (confirm('¿Estás seguro de que querés eliminar esta tarea?')) {
+                deleteTask(colId, taskId);
+                renderEditorTasks();
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-editar').forEach(btn => {
+        btn.addEventListener('click', e => {
+            const taskId = e.target.closest('button').dataset.id;
+            const colId = e.target.closest('button').dataset.col;
+            const column = byId(boardState.columns, colId);
+            const taskToEdit = column?.tasks.find(t => t.id === taskId);
+            
+            if (taskToEdit) {
+                DOM.tituloTarea.value = taskToEdit.title;
+                const descInput = $('#desc-tarea');
+                if (descInput) descInput.value = taskToEdit.description || '';
+                if (DOM.fechaTarea) DOM.fechaTarea.value = taskToEdit.dueDate || '';
+                
+                const mapPiezaReverse = { 'Logo': 'logo', 'Banner': 'banner', 'Redes': 'redes', 'UI': 'ui' };
+                if (DOM.tipoPieza && taskToEdit.labels && taskToEdit.labels.length) {
+                    DOM.tipoPieza.value = mapPiezaReverse[taskToEdit.labels[0]] || '';
+                    checkPlaceholder(DOM.tipoPieza);
+                }
+                
+                const mapEstadoReverse = { 'Brief': 'brief', 'En proceso': 'proceso', 'Revisión del cliente': 'revision', 'Aprobado': 'aprobado' };
+                if (DOM.estadoTarea) {
+                    DOM.estadoTarea.value = mapEstadoReverse[column.name] || '';
+                    checkPlaceholder(DOM.estadoTarea);
+                }
+                
+                DOM.formTarea.dataset.editandoId = taskToEdit.id;
+                DOM.formTarea.dataset.editandoCol = colId;
+                const btnCrear = document.querySelector('.btn-crear');
+                if (btnCrear) btnCrear.textContent = 'Guardar cambios';
+                DOM.tituloTarea.focus();
+            }
+        });
     });
 }
 
@@ -657,6 +807,8 @@ function initEditor() {
         e.preventDefault();
         const title = DOM.tituloTarea.value.trim();
         const dueDate = DOM.fechaTarea ? DOM.fechaTarea.value : null;
+        const descInput = $('#desc-tarea');
+        const description = descInput ? descInput.value.trim() : '';
         
         const mapPieza = { 'logo': 'Logo', 'banner': 'Banner', 'redes': 'Redes', 'ui': 'UI' };
         const labels = [];
@@ -672,7 +824,32 @@ function initEditor() {
         }
 
         if (title && targetColumn) {
-            addTask(targetColumn.id, title, labels, dueDate);
+            const editId = DOM.formTarea.dataset.editandoId;
+            const editCol = DOM.formTarea.dataset.editandoCol;
+            
+            if (editId && editCol) {
+                if (editCol !== targetColumn.id) {
+                    deleteTask(editCol, editId);
+                    addTask(targetColumn.id, title, labels, dueDate, description);
+                } else {
+                    const taskToEdit = byId(byId(boardState.columns, editCol)?.tasks || [], editId);
+                    if (taskToEdit) {
+                        taskToEdit.title = title;
+                        taskToEdit.labels = labels;
+                        taskToEdit.dueDate = dueDate;
+                        taskToEdit.description = description;
+                        saveToLocalStorage();
+                        renderBoard();
+                    }
+                }
+                delete DOM.formTarea.dataset.editandoId;
+                delete DOM.formTarea.dataset.editandoCol;
+                const btnCrear = document.querySelector('.btn-crear');
+                if (btnCrear) btnCrear.textContent = 'Crear tarea';
+            } else {
+                addTask(targetColumn.id, title, labels, dueDate, description);
+            }
+
             DOM.formTarea.reset();
             if (DOM.tipoPieza) checkPlaceholder(DOM.tipoPieza);
             if (DOM.estadoTarea) checkPlaceholder(DOM.estadoTarea);
@@ -680,34 +857,101 @@ function initEditor() {
         }
     });
 
-    if (DOM.btnCancelar) {
-        DOM.btnCancelar.addEventListener('click', () => {
-            window.location.href = 'board.html';
+    const formCancelBtn = document.querySelector('#form-tarea .btn-cancelar');
+    if (formCancelBtn) {
+        formCancelBtn.addEventListener('click', () => {
+            DOM.formTarea.reset();
+            delete DOM.formTarea.dataset.editandoId;
+            delete DOM.formTarea.dataset.editandoCol;
+            const btnCrear = document.querySelector('.btn-crear');
+            if (btnCrear) btnCrear.textContent = 'Crear tarea';
+            if (DOM.tipoPieza) checkPlaceholder(DOM.tipoPieza);
+            if (DOM.estadoTarea) checkPlaceholder(DOM.estadoTarea);
         });
     }
 
+    const btnVolver = document.querySelector('a.btn-cancelar[href="board.html"]');
+    if (btnVolver && currentProjectId) {
+        btnVolver.href = `board.html?id=${currentProjectId}`;
+    }
+
     renderEditorTasks();
+}
+
+function renderHomeProjectsList() {
+    const projectsContainer = document.getElementById('projects-container');
+    if (!projectsContainer) return;
+    
+    let projects = JSON.parse(localStorage.getItem('katban_projects')) || [];
+    projects.sort((a,b) => (b.lastModified || 0) - (a.lastModified || 0)); // más recientes primero
+    
+    const btnNewProjectHTML = `
+        <a class="project-card-new d-flex flex-column align-items-center justify-content-center gap-3 py-4 text-decoration-none"
+            href="board.html?new=1">
+            <div class="new-project-icon rounded-circle d-flex align-items-center justify-content-center">
+                <i class="bi bi-plus"></i>
+            </div>
+            <span class="small fw-semibold text-primary-brand">Nuevo proyecto</span>
+        </a>
+    `;
+    
+    projectsContainer.innerHTML = '';
+    const pastelColors = ['#7F9C96', '#b5c68a', '#e3c27f', '#d8a7a7', '#9fb8d0', '#bca3cc'];
+    
+    projects.forEach((proj, index) => {
+        let title = proj.state.projectTitle || 'Sin título';
+        let tasks = proj.state.columns ? proj.state.columns.flatMap(c => c.tasks) : [];
+        let total = tasks.length;
+        let color = pastelColors[index % pastelColors.length];
+        
+        projectsContainer.innerHTML += `
+            <a href="board.html?id=${proj.id}" class="project-card card border-0 overflow-hidden text-decoration-none text-reset">
+                <div class="project-card-cover" style="background-color: ${color};"></div>
+                <div class="card-body p-3">
+                    <p class="card-title small fw-semibold text-truncate mb-2">${title}</p>
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <span class="small text-secondary">Tareas</span>
+                        <span class="small text-muted d-flex align-items-center gap-1"><span
+                            class="stat-dot rounded-circle d-inline-block bg-success"></span> ${total}</span>
+                    </div>
+                </div>
+            </a>
+        `;
+    });
+    
+    projectsContainer.innerHTML += btnNewProjectHTML;
 }
 
 function initBoard() {
     cacheDOMSelectors();
     initSession();
 
+    const isHome = window.location.pathname.includes('home.html') || window.location.pathname.endsWith('/') || window.location.pathname.endsWith('PRUEBA3');
+
     if (!loadFromLocalStorage()) {
-        boardState.columns = DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] }));
-        boardState.projectTitle = 'TITULO DEL PROYECTO';
-        saveToLocalStorage();
+        if (!isHome) {
+            currentProjectId = id();
+            boardState.columns = DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] }));
+            boardState.projectTitle = 'Titulo del proyecto 1';
+            saveToLocalStorage();
+            window.history.replaceState({}, '', window.location.pathname + '?id=' + currentProjectId);
+        }
     }
 
-    if (DOM.projectTitle) DOM.projectTitle.textContent = boardState.projectTitle;
-    if (DOM.editorNavTitle) DOM.editorNavTitle.textContent = boardState.projectTitle;
-    if (DOM.editorMainTitle) DOM.editorMainTitle.textContent = boardState.projectTitle;
-    updateNavbarProjectTitle();
+    if (!isHome) {
+        if (DOM.projectTitle) DOM.projectTitle.textContent = boardState.projectTitle;
+        if (DOM.editorNavTitle) DOM.editorNavTitle.textContent = boardState.projectTitle;
+        if (DOM.editorMainTitle) DOM.editorMainTitle.textContent = boardState.projectTitle;
+        updateNavbarProjectTitle();
 
-    renderBoard();
-    initEditableFields();
-    initSearchListeners();
-    initEditor();
+        renderBoard();
+        initEditableFields();
+        initSearchListeners();
+        initEditor();
+    } else {
+        initSearchListeners();
+        renderHomeProjectsList();
+    }
 }
 
 initBoard();

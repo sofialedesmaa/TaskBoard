@@ -1,31 +1,7 @@
 // ==========================================
 // 1. ESTADO Y CONFIGURACIÓN (VARIABLES)
 // ==========================================
-// Cargar usuarios de localStorage o inicializar la base de datos simulada por defecto
-let usuarios = JSON.parse(localStorage.getItem('usuarios_registrados'));
-if (!usuarios) {
-    usuarios = [
-        {
-            email: 'tobias@mediapila.com',
-            password: '12345',
-            nombre: 'Tobias',
-            token: 'token-tobias-abc123'
-        },
-        {
-            email: 'rocio@mediapila.com',
-            password: '6789',
-            nombre: 'Rocio',
-            token: 'token-rocio-xyz456'
-        },
-        {
-            email: 'admin@mediapila.com',
-            password: 'admin',
-            nombre: 'Administrador',
-            token: 'token-admin-999'
-        }
-    ];
-    localStorage.setItem('usuarios_registrados', JSON.stringify(usuarios));
-}
+const API_BASE_URL = 'http://localhost:5000/api';
 
 // ==========================================
 // 2. ELEMENTOS DEL DOM (SELECTORES)
@@ -45,37 +21,52 @@ const mensajeRegistro = document.getElementById("mensajeRegistro");
 // Formulario de Recuperación (Modal)
 const modalRecuperarEl = document.getElementById("modalRecuperar");
 const recupEmail = document.getElementById("recupEmail");
-const mensajeRecuperar = document.getElementById("mensajeRecuperar");
-
+const mensajeRecover = document.getElementById("mensajeRecuperar"); // Se sincroniza el nombre para evitar conflictos
 
 // ==========================================
 // 3. FUNCIONES
 // ==========================================
 
 // Iniciar sesión principal
-function login() {
+async function login() {
     const emailIngresado = inputEmail ? inputEmail.value.trim() : "";
     const pswIngresada = inputPassword ? inputPassword.value : "";
 
-    // Buscar en el array si existe un usuario con esos datos
-    const usuarioEncontrado = usuarios.find(
-        u => u.email === emailIngresado && u.password === pswIngresada
-    );
-
-    if (usuarioEncontrado) {
-        // Guardar token y nombre de usuario en localStorage
-        localStorage.setItem('token_mediaPila', usuarioEncontrado.token);
-        localStorage.setItem('nombre_usuario', usuarioEncontrado.nombre);
-        window.location.href = 'home.html';
-    } else {
+    if (!emailIngresado || !pswIngresada) {
         if (mensajeLogin) {
-            mensajeLogin.innerHTML = '<div class="alert alert-danger">Email o contraseña incorrectos</div>';
+            mensajeLogin.innerHTML = '<div class="alert alert-danger">Por favor, ingresa email y contraseña.</div>';
+        }
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emailIngresado, password: pswIngresada })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Guardar token y nombre de usuario en localStorage
+            localStorage.setItem('token_mediaPila', data.token);
+            localStorage.setItem('nombre_usuario', data.nombre);
+            window.location.href = 'home.html';
+        } else {
+            if (mensajeLogin) {
+                mensajeLogin.innerHTML = `<div class="alert alert-danger">${data.error || 'Email o contraseña incorrectos'}</div>`;
+            }
+        }
+    } catch (err) {
+        if (mensajeLogin) {
+            mensajeLogin.innerHTML = '<div class="alert alert-danger">Error de conexión con el servidor.</div>';
         }
     }
 }
 
 // Crear cuenta de usuario
-function registrarUsuario() {
+async function registrarUsuario() {
     const nombre = regNombre ? regNombre.value.trim() : "";
     const email = regEmail ? regEmail.value.trim() : "";
     const password = regPassword ? regPassword.value.trim() : "";
@@ -87,60 +78,69 @@ function registrarUsuario() {
         return;
     }
 
-    // Verificar si ya existe el correo
-    const existe = usuarios.find(u => u.email === email);
-    if (existe) {
-        if (mensajeRegistro) {
-            mensajeRegistro.innerHTML = '<div class="alert alert-danger p-2 fs-7">Este email ya está registrado.</div>';
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Mostrar éxito en el login principal
+            if (mensajeLogin) {
+                mensajeLogin.innerHTML = '<div class="alert alert-success p-2">¡Cuenta creada con éxito! Ya puedes iniciar sesión.</div>';
+            }
+            limpiarFormularioRegistro();
+            if (modalRegistroEl) {
+                const modal = bootstrap.Modal.getInstance(modalRegistroEl) || new bootstrap.Modal(modalRegistroEl);
+                modal.hide();
+            }
+        } else {
+            if (mensajeRegistro) {
+                mensajeRegistro.innerHTML = `<div class="alert alert-danger p-2 fs-7">${data.error || 'Error al registrar.'}</div>`;
+            }
         }
-        return;
-    }
-
-    // Crear nuevo usuario
-    const nuevoUsuario = {
-        nombre: nombre,
-        email: email,
-        password: password,
-        token: 'token-' + nombre.toLowerCase().replace(/\s+/g, '') + '-' + Math.random().toString(36).substr(2, 9)
-    };
-
-    usuarios.push(nuevoUsuario);
-    localStorage.setItem('usuarios_registrados', JSON.stringify(usuarios));
-
-    // Mostrar éxito en el login principal
-    if (mensajeLogin) {
-        mensajeLogin.innerHTML = '<div class="alert alert-success p-2">¡Cuenta creada con éxito! Ya puedes iniciar sesión.</div>';
-    }
-
-    // Limpiar campos del modal
-    limpiarFormularioRegistro();
-
-    // Cerrar modal usando Bootstrap
-    if (modalRegistroEl) {
-        const modal = bootstrap.Modal.getInstance(modalRegistroEl) || new bootstrap.Modal(modalRegistroEl);
-        modal.hide();
+    } catch (err) {
+        if (mensajeRegistro) {
+            mensajeRegistro.innerHTML = '<div class="alert alert-danger p-2 fs-7">Error de conexión con el servidor.</div>';
+        }
     }
 }
 
 // Recuperar contraseña
-function recuperarPassword() {
+async function recuperarPassword() {
     const email = recupEmail ? recupEmail.value.trim() : "";
 
     if (!email) {
-        if (mensajeRecuperar) {
-            mensajeRecuperar.innerHTML = '<div class="alert alert-danger p-2 fs-7">Por favor, ingresa tu email.</div>';
+        if (mensajeRecover) {
+            mensajeRecover.innerHTML = '<div class="alert alert-danger p-2 fs-7">Por favor, ingresa tu email.</div>';
         }
         return;
     }
 
-    const usuario = usuarios.find(u => u.email === email);
-    if (usuario) {
-        if (mensajeRecuperar) {
-            mensajeRecuperar.innerHTML = '<div class="alert alert-success p-2 fs-7">Tu contraseña es: <strong>' + usuario.password + '</strong></div>';
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/recover`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            if (mensajeRecover) {
+                mensajeRecover.innerHTML = `<div class="alert alert-success p-2 fs-7">Tu contraseña es: <strong>${data.password}</strong></div>`;
+            }
+        } else {
+            if (mensajeRecover) {
+                mensajeRecover.innerHTML = `<div class="alert alert-danger p-2 fs-7">${data.error || 'Error al recuperar la contraseña.'}</div>`;
+            }
         }
-    } else {
-        if (mensajeRecuperar) {
-            mensajeRecuperar.innerHTML = '<div class="alert alert-danger p-2 fs-7">No encontramos ninguna cuenta con ese email.</div>';
+    } catch (err) {
+        if (mensajeRecover) {
+            mensajeRecover.innerHTML = '<div class="alert alert-danger p-2 fs-7">Error de conexión con el servidor.</div>';
         }
     }
 }
@@ -173,4 +173,3 @@ document.addEventListener("DOMContentLoaded", () => {
         modalRegistroEl.addEventListener('hidden.bs.modal', limpiarFormularioRegistro);
     }
 });
-

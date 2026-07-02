@@ -70,32 +70,55 @@ function cacheDOMSelectors() {
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const id = () => `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
-// NUEVA: Retorna la clave de localStorage específica para el usuario logueado en base a su token
-function getProjectsStorageKey() {
+const API_BASE_URL = 'http://localhost:5000/api';
+
+function getApiHeaders() {
     const token = localStorage.getItem('token_mediaPila');
-    return token ? `katban_projects_${token}` : 'katban_projects';
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
 }
 
-// MODIFICADO: Guarda los cambios del proyecto activo respetando la nueva estructura { id, titulo, imagen, columnas }
-const saveToLocalStorage = () => {
-    if (!currentProjectId) return;
-    let projects = getNormalizedProjects();
-    let idx = projects.findIndex(p => p.id === currentProjectId);
-    if (idx >= 0) {
-        projects[idx].titulo = boardState.projectTitle;
-        projects[idx].columnas = boardState.columns;
-        projects[idx].lastModified = Date.now();
-    } else {
-        projects.push({
-            id: currentProjectId,
-            titulo: boardState.projectTitle,
-            imagen: '',
-            columnas: boardState.columns,
-            lastModified: Date.now()
+// Helper para crear proyectos y tareas demo mediante la API
+async function apiCreateProject(titulo, imagen, color, columns = null) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/proyectos`, {
+            method: 'POST',
+            headers: getApiHeaders(),
+            body: JSON.stringify({ titulo, imagen, color })
         });
+        const proj = await res.json();
+        
+        if (columns && proj.columnas) {
+            for (const col of columns) {
+                const targetCol = proj.columnas.find(c => c.name === col.name);
+                if (targetCol && col.tasks) {
+                    for (const t of col.tasks) {
+                        await fetch(`${API_BASE_URL}/tareas`, {
+                            method: 'POST',
+                            headers: getApiHeaders(),
+                            body: JSON.stringify({
+                                title: t.title,
+                                description: t.description || '',
+                                labels: t.labels || [],
+                                dueDate: t.dueDate || '',
+                                priority: t.priority || 'Media',
+                                columnaId: targetCol.id
+                            })
+                        });
+                    }
+                }
+            }
+        }
+        return proj;
+    } catch (e) {
+        console.error('Error al precargar el proyecto demo en el backend:', e);
     }
-    localStorage.setItem(getProjectsStorageKey(), JSON.stringify(projects));
-};
+}
+
+// Se mantiene como una función vacía para conservar compatibilidad con cualquier otra llamada legacy
+const saveToLocalStorage = () => {};
 const byId = (items, itemId) => items.find(item => item.id === itemId);
 const make = (tag, className = '', html = '') => {
     const node = document.createElement(tag);
@@ -232,64 +255,32 @@ function getDemoProjects() {
     });
 }
 
-// MODIFICADO: Recupera y normaliza los proyectos guardados en localStorage para garantizar compatibilidad con formatos heredados (state)
-function getNormalizedProjects() {
-    const key = getProjectsStorageKey();
-    let projects = JSON.parse(localStorage.getItem(key)) || [];
-    let needsSave = false;
-
-    projects = projects.map(p => {
-        if (p.titulo !== undefined && p.columnas !== undefined) {
-            return p;
+// MODIFICADO: Recupera y normaliza los proyectos guardados en la API del backend
+async function getNormalizedProjects() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/proyectos`, {
+            headers: getApiHeaders()
+        });
+        if (response.ok) {
+            return await response.json();
         }
-
-        needsSave = true;
-        return {
-            id: p.id || id(),
-            titulo: (p.state && p.state.projectTitle) || 'Sin título',
-            imagen: p.imagen || '',
-            columnas: (p.state && p.state.columns) || DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] })),
-            lastModified: p.lastModified || Date.now()
-        };
-    });
-
-    if (needsSave) {
-        localStorage.setItem(key, JSON.stringify(projects));
+    } catch (e) {
+        console.error('Error al obtener proyectos desde la API:', e);
     }
-    return projects;
+    return [];
 }
 
-// MODIFICADO: Migra el antiguo estado a la nueva estructura unificada
-function migrateOldData() {
-    let oldState = localStorage.getItem('taskboard_state');
-    const key = getProjectsStorageKey();
-    let projects = JSON.parse(localStorage.getItem(key)) || [];
-    if (oldState) {
-        try {
-            let parsedOld = JSON.parse(oldState);
-            projects.push({
-                id: id(),
-                titulo: parsedOld.projectTitle || 'Sin título',
-                imagen: '',
-                columnas: parsedOld.columns || [],
-                lastModified: Date.now()
-            });
-            localStorage.removeItem('taskboard_state');
-            localStorage.setItem(key, JSON.stringify(projects));
-        } catch (e) {}
-    }
-}
-
-// MODIFICADO: Carga el proyecto activo utilizando la nueva estructura { id, titulo, columnas, imagen }
-function loadFromLocalStorage() {
-    migrateOldData();
-    const key = getProjectsStorageKey();
-    let projects = getNormalizedProjects();
+// MODIFICADO: Carga el proyecto activo utilizando la API REST
+async function loadFromLocalStorage() {
+    let projects = await getNormalizedProjects();
     
-    // Si no hay ningún proyecto, precargar los de demostración
+    // Si no hay ningún proyecto, precargar los de demostración a través de la API
     if (projects.length === 0) {
-        projects = getDemoProjects();
-        localStorage.setItem(key, JSON.stringify(projects));
+        const demos = getDemoProjects();
+        for (const d of demos) {
+            await apiCreateProject(d.titulo, d.imagen, d.color || 'colorBrief', d.columnas);
+        }
+        projects = await getNormalizedProjects();
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -331,13 +322,12 @@ function loadFromLocalStorage() {
     return false;
 }
 
-// MODIFICADO: Normaliza los nombres de columnas para que coincidan con los del sistema y guarda los cambios
+// MODIFICADO: Normaliza los nombres de columnas para que coincidan con los del sistema
 function normalizeDefaultColumnNames() {
     boardState.columns.forEach(column => {
         if (['Revision', 'Revisión'].includes(column.name)) column.name = 'Revisión del cliente';
         if (column.name === 'En Proceso') column.name = 'En proceso';
     });
-    saveToLocalStorage();
 }
 
 /* ============================================================
@@ -471,10 +461,21 @@ function createTaskElement(task, columnId) {
 /* ============================================================
    8. FUNCIONES — Columnas (CRUD)
    ============================================================ */
-function addColumn(name, colorClass = COLORS[0]) {
-    boardState.columns.push({ id: id(), name, colorClass, tasks: [] });
-    saveToLocalStorage();
-    renderBoard();
+async function addColumn(name, colorClass = COLORS[0]) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/columnas`, {
+            method: 'POST',
+            headers: getApiHeaders(),
+            body: JSON.stringify({ nombre: name, colorClass, proyectoId: currentProjectId })
+        });
+        if (response.ok) {
+            const newCol = await response.json();
+            boardState.columns.push(newCol);
+            renderBoard();
+        }
+    } catch (err) {
+        console.error('Error al añadir columna:', err);
+    }
 }
 
 function deleteColumn(columnId) {
@@ -514,8 +515,8 @@ function deleteColumn(columnId) {
         deleteBtn.classList.toggle('bg-light', active);
     };
 
-    deleteBtn.addEventListener('click', () => {
-        removeColumn(columnId);
+    deleteBtn.addEventListener('click', async () => {
+        await removeColumn(columnId);
         modal.hide();
     });
     ['mouseenter', 'focus'].forEach(event => deleteBtn.addEventListener(event, () => setDeleteHover(true)));
@@ -524,17 +525,36 @@ function deleteColumn(columnId) {
     modal.show();
 }
 
-function removeColumn(columnId) {
-    boardState.columns = boardState.columns.filter(column => column.id !== columnId);
-    saveToLocalStorage();
-    renderBoard();
+async function removeColumn(columnId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/columnas/${columnId}`, {
+            method: 'DELETE',
+            headers: getApiHeaders()
+        });
+        if (response.ok) {
+            boardState.columns = boardState.columns.filter(column => column.id !== columnId);
+            renderBoard();
+        }
+    } catch (err) {
+        console.error('Error al eliminar columna:', err);
+    }
 }
 
-function updateColumnName(columnId, newName) {
+async function updateColumnName(columnId, newName) {
     const column = byId(boardState.columns, columnId);
     if (column && newName) {
-        column.name = newName;
-        saveToLocalStorage();
+        try {
+            const response = await fetch(`${API_BASE_URL}/columnas/${columnId}`, {
+                method: 'PUT',
+                headers: getApiHeaders(),
+                body: JSON.stringify({ nombre: newName })
+            });
+            if (response.ok) {
+                column.name = newName;
+            }
+        } catch (err) {
+            console.error('Error al actualizar nombre de columna:', err);
+        }
     }
 }
 
@@ -579,10 +599,10 @@ function promptAddColumn() {
         ['border-primary', 'border-3', 'shadow'].forEach(cls => label.classList.toggle(cls, input.checked));
         label.classList.toggle('border-secondary', !input.checked);
     });
-    const save = () => {
+    const save = async () => {
         const name = input.value.trim();
         if (!name) return input.classList.add('is-invalid'), input.focus();
-        addColumn(name, $('input[name="new-column-color"]:checked', modalEl).value);
+        await addColumn(name, $('input[name="new-column-color"]:checked', modalEl).value);
         modal.hide();
     };
 
@@ -626,10 +646,10 @@ function showAddTaskForm(columnId, bodyElement) {
       <button class="btn btn-sm btn-outline-secondary" data-action="cancel-add">Cancelar</button>
     </div>`);
     const title = $(`#new-task-title-${columnId}`, form);
-    $('[data-action="confirm-add"]', form).addEventListener('click', () => {
+    $('[data-action="confirm-add"]', form).addEventListener('click', async () => {
         const value = title.value.trim();
         if (!value) return title.classList.add('is-invalid');
-        addTask(columnId, value, $$('input[type="checkbox"]:checked', form).map(cb => cb.value), $(`#new-task-date-${columnId}`, form).value || null);
+        await addTask(columnId, value, $$('input[type="checkbox"]:checked', form).map(cb => cb.value), $(`#new-task-date-${columnId}`, form).value || null);
     });
     $('[data-action="cancel-add"]', form).addEventListener('click', () => form.remove());
     title.addEventListener('keydown', e => e.key === 'Enter' && $('[data-action="confirm-add"]', form).click());
@@ -637,20 +657,46 @@ function showAddTaskForm(columnId, bodyElement) {
     title.focus();
 }
 
-function addTask(columnId, title, labels = [], dueDate = null, description = '') {
+async function addTask(columnId, title, labels = [], dueDate = null, description = '') {
     const column = byId(boardState.columns, columnId);
     if (!column) return;
-    column.tasks.push({ id: id(), title, labels, dueDate, description });
-    saveToLocalStorage();
-    renderBoard();
+    try {
+        const response = await fetch(`${API_BASE_URL}/tareas`, {
+            method: 'POST',
+            headers: getApiHeaders(),
+            body: JSON.stringify({
+                title,
+                description,
+                labels,
+                dueDate,
+                columnaId: columnId
+            })
+        });
+        if (response.ok) {
+            const newTaskId = await response.json();
+            column.tasks.push(newTaskId);
+            renderBoard();
+        }
+    } catch (err) {
+        console.error('Error al añadir tarea:', err);
+    }
 }
 
-function deleteTask(columnId, taskId) {
+async function deleteTask(columnId, taskId) {
     const column = byId(boardState.columns, columnId);
     if (!column) return;
-    column.tasks = column.tasks.filter(task => task.id !== taskId);
-    saveToLocalStorage();
-    renderBoard();
+    try {
+        const response = await fetch(`${API_BASE_URL}/tareas/${taskId}`, {
+            method: 'DELETE',
+            headers: getApiHeaders()
+        });
+        if (response.ok) {
+            column.tasks = column.tasks.filter(task => task.id !== taskId);
+            renderBoard();
+        }
+    } catch (err) {
+        console.error('Error al eliminar tarea:', err);
+    }
 }
 
 function showEditTaskModal(task, columnId) {
@@ -691,23 +737,34 @@ function showEditTaskModal(task, columnId) {
     document.body.appendChild(modalEl);
 
     const modal = new bootstrap.Modal(modalEl);
-    $('#btn-save-edit', modalEl).addEventListener('click', () => {
+    $('#btn-save-edit', modalEl).addEventListener('click', async () => {
         const title = $('#edit-task-title', modalEl);
         const value = title.value.trim();
         if (!value) return title.classList.add('is-invalid');
-        updateTask(columnId, task.id, value, $$('input[type="checkbox"]:checked', modalEl).map(cb => cb.value), $('#edit-task-date', modalEl).value || null);
+        await updateTask(columnId, task.id, value, $$('input[type="checkbox"]:checked', modalEl).map(cb => cb.value), $('#edit-task-date', modalEl).value || null);
         modal.hide();
     });
     modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
     modal.show();
 }
 
-function updateTask(columnId, taskId, title, labels, dueDate) {
+async function updateTask(columnId, taskId, title, labels, dueDate) {
     const task = byId(byId(boardState.columns, columnId)?.tasks || [], taskId);
     if (!task) return;
-    Object.assign(task, { title, labels, dueDate });
-    saveToLocalStorage();
-    renderBoard();
+    try {
+        const response = await fetch(`${API_BASE_URL}/tareas/${taskId}`, {
+            method: 'PUT',
+            headers: getApiHeaders(),
+            body: JSON.stringify({ title, labels, dueDate })
+        });
+        if (response.ok) {
+            const updated = await response.json();
+            Object.assign(task, updated);
+            renderBoard();
+        }
+    } catch (err) {
+        console.error('Error al actualizar tarea:', err);
+    }
 }
 
 /* ============================================================
@@ -721,16 +778,27 @@ function getDragAfterElement(container, y) {
     }, { offset: -Infinity }).element;
 }
 
-function moveTask(fromColumnId, toColumnId, taskId, afterTaskId) {
+async function moveTask(fromColumnId, toColumnId, taskId, afterTaskId) {
     const from = byId(boardState.columns, fromColumnId);
     const to = byId(boardState.columns, toColumnId);
     const index = from?.tasks.findIndex(task => task.id === taskId) ?? -1;
     if (!from || !to || index < 0) return;
-    const [task] = from.tasks.splice(index, 1);
-    const afterIndex = afterTaskId ? to.tasks.findIndex(task => task.id === afterTaskId) : -1;
-    to.tasks.splice(afterIndex < 0 ? to.tasks.length : afterIndex, 0, task);
-    saveToLocalStorage();
-    renderBoard();
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/tareas/${taskId}`, {
+            method: 'PUT',
+            headers: getApiHeaders(),
+            body: JSON.stringify({ columnaId: toColumnId })
+        });
+        if (response.ok) {
+            const [task] = from.tasks.splice(index, 1);
+            const afterIndex = afterTaskId ? to.tasks.findIndex(task => task.id === afterTaskId) : -1;
+            to.tasks.splice(afterIndex < 0 ? to.tasks.length : afterIndex, 0, task);
+            renderBoard();
+        }
+    } catch (err) {
+        console.error('Error al mover tarea:', err);
+    }
 }
 
 /* ============================================================
@@ -758,14 +826,23 @@ function setupInlineEdit(pencilId, textId) {
     if (textId === 'project-title') text.addEventListener('input', updateNavbarProjectTitle);
 }
 
-function updateNavbarProjectTitle() {
+async function updateNavbarProjectTitle() {
     const title = DOM.projectTitle;
     const navbar = DOM.navbarProjectTitle;
     if (title) {
         const text = title.textContent.trim() || 'Titulo del proyecto 1';
         if (navbar) navbar.textContent = text;
         boardState.projectTitle = text;
-        saveToLocalStorage();
+        
+        try {
+            await fetch(`${API_BASE_URL}/proyectos/${currentProjectId}`, {
+                method: 'PUT',
+                headers: getApiHeaders(),
+                body: JSON.stringify({ titulo: text })
+            });
+        } catch (e) {
+            console.error('Error al guardar el nombre en el backend:', e);
+        }
     }
 }
 
@@ -873,11 +950,11 @@ function renderEditorTasks() {
     });
 
     document.querySelectorAll('.btn-eliminar').forEach(btn => {
-        btn.addEventListener('click', e => {
+        btn.addEventListener('click', async e => {
             const taskId = e.target.closest('button').dataset.id;
             const colId = e.target.closest('button').dataset.col;
             if (confirm('¿Estás seguro de que querés eliminar esta tarea?')) {
-                deleteTask(colId, taskId);
+                await deleteTask(colId, taskId);
                 renderEditorTasks();
             }
         });
@@ -932,7 +1009,7 @@ function initEditor() {
         }
     }
 
-    DOM.formTarea.addEventListener('submit', e => {
+    DOM.formTarea.addEventListener('submit', async e => {
         e.preventDefault();
         const title = DOM.tituloTarea.value.trim();
         const dueDate = DOM.fechaTarea ? DOM.fechaTarea.value : null;
@@ -958,25 +1035,27 @@ function initEditor() {
             
             if (editId && editCol) {
                 if (editCol !== targetColumn.id) {
-                    deleteTask(editCol, editId);
-                    addTask(targetColumn.id, title, labels, dueDate, description);
+                    await deleteTask(editCol, editId);
+                    await addTask(targetColumn.id, title, labels, dueDate, description);
                 } else {
-                    const taskToEdit = byId(byId(boardState.columns, editCol)?.tasks || [], editId);
-                    if (taskToEdit) {
-                        taskToEdit.title = title;
-                        taskToEdit.labels = labels;
-                        taskToEdit.dueDate = dueDate;
-                        taskToEdit.description = description;
-                        saveToLocalStorage();
-                        renderBoard();
-                    }
+                    await updateTask(editCol, editId, title, labels, dueDate);
+                    // Actualizar descripción en base de datos ya que updateTask normal la omite
+                    try {
+                        await fetch(`${API_BASE_URL}/tareas/${editId}`, {
+                            method: 'PUT',
+                            headers: getApiHeaders(),
+                            body: JSON.stringify({ description })
+                        });
+                        const taskToEdit = byId(byId(boardState.columns, editCol)?.tasks || [], editId);
+                        if (taskToEdit) taskToEdit.description = description;
+                    } catch (err) {}
                 }
                 delete DOM.formTarea.dataset.editandoId;
                 delete DOM.formTarea.dataset.editandoCol;
                 const btnCrear = document.querySelector('.btn-crear');
                 if (btnCrear) btnCrear.textContent = 'Crear tarea';
             } else {
-                addTask(targetColumn.id, title, labels, dueDate, description);
+                await addTask(targetColumn.id, title, labels, dueDate, description);
             }
 
             DOM.formTarea.reset();
@@ -1007,12 +1086,12 @@ function initEditor() {
     renderEditorTasks();
 }
 
-// MODIFICADO: Renderiza las tarjetas de proyectos en la Home utilizando la nueva estructura de datos, soportando imágenes de portada o color seleccionado, eliminación de proyectos y enlazando la creación de proyectos
-function renderHomeProjectsList() {
+// MODIFICADO: Renderiza las tarjetas de proyectos en la Home utilizando la API del backend, soportando imágenes de portada, color seleccionado y eliminación
+async function renderHomeProjectsList() {
     const projectsContainer = document.getElementById('projects-container');
     if (!projectsContainer) return;
     
-    let projects = getNormalizedProjects();
+    let projects = await getNormalizedProjects();
     projects.sort((a,b) => (b.lastModified || 0) - (a.lastModified || 0)); // más recientes primero
     
     const btnNewProjectHTML = `
@@ -1074,16 +1153,21 @@ function renderHomeProjectsList() {
 
     // Registra eventos para la eliminación de tableros
     document.querySelectorAll('.btn-delete-project').forEach(btn => {
-        btn.addEventListener('click', e => {
+        btn.addEventListener('click', async e => {
             e.preventDefault();
             e.stopPropagation();
             const projId = btn.dataset.projectId;
             const projTitle = btn.dataset.projectTitle;
             if (confirm(`¿Estás seguro de que querés eliminar el proyecto "${projTitle}"? Esta acción no se puede deshacer.`)) {
-                let projects = getNormalizedProjects();
-                projects = projects.filter(p => p.id !== projId);
-                localStorage.setItem(getProjectsStorageKey(), JSON.stringify(projects));
-                renderHomeProjectsList();
+                try {
+                    await fetch(`${API_BASE_URL}/proyectos/${projId}`, {
+                        method: 'DELETE',
+                        headers: getApiHeaders()
+                    });
+                    await renderHomeProjectsList();
+                } catch (e) {
+                    console.error('Error al eliminar el proyecto:', e);
+                }
             }
         });
     });
@@ -1133,7 +1217,6 @@ function promptCreateProject() {
     const saveBtn = $('#btn-save-project', modalEl);
     const colorInputs = $$('input[name="new-project-color"]', modalEl);
 
-    // Dibuja los bordes de selección de forma idéntica al modal de columnas
     const paintColors = () => colorInputs.forEach(input => {
         const label = $(`label[for="${input.id}"]`, modalEl);
         ['border-primary', 'border-3', 'shadow'].forEach(cls => label.classList.toggle(cls, input.checked));
@@ -1142,7 +1225,7 @@ function promptCreateProject() {
 
     colorInputs.forEach(input => $(`label[for="${input.id}"]`, modalEl).addEventListener('click', () => (input.checked = true, paintColors())));
 
-    const save = () => {
+    const save = async () => {
         const title = inputTitle.value.trim();
         if (!title) {
             inputTitle.classList.add('is-invalid');
@@ -1153,22 +1236,21 @@ function promptCreateProject() {
         const imageUrl = inputImage.value.trim();
         const selectedColorInput = $('input[name="new-project-color"]:checked', modalEl);
         const selectedColor = selectedColorInput ? selectedColorInput.value : COLORS[0];
-        const newProjId = id();
         
-        let projects = getNormalizedProjects();
-        const newProject = {
-            id: newProjId,
-            titulo: title,
-            imagen: imageUrl,
-            color: selectedColor,
-            columnas: DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] })),
-            lastModified: Date.now()
-        };
-        projects.push(newProject);
-        localStorage.setItem(getProjectsStorageKey(), JSON.stringify(projects));
-        
-        modal.hide();
-        window.location.href = `board.html?id=${newProjId}`;
+        try {
+            const response = await fetch(`${API_BASE_URL}/proyectos`, {
+                method: 'POST',
+                headers: getApiHeaders(),
+                body: JSON.stringify({ titulo: title, imagen: imageUrl, color: selectedColor })
+            });
+            if (response.ok) {
+                const newProject = await response.json();
+                modal.hide();
+                window.location.href = `board.html?id=${newProject.id}`;
+            }
+        } catch (err) {
+            console.error('Error al crear el proyecto:', err);
+        }
     };
 
     saveBtn.addEventListener('click', save);
@@ -1181,28 +1263,20 @@ function promptCreateProject() {
     modal.show();
 }
 
-// MODIFICADO: Inicialización de la app, adaptada para controlar la intercepción de URL params para creación y listeners sin recarga en la Home
-function initBoard() {
+// MODIFICADO: Inicialización de la app con llamadas asíncronas para el backend
+async function initBoard() {
     cacheDOMSelectors();
     initSession();
 
     const isHome = window.location.pathname.includes('home.html') || window.location.pathname.endsWith('/') || window.location.pathname.endsWith('PRUEBA3');
 
-    if (!loadFromLocalStorage()) {
-        if (!isHome) {
-            currentProjectId = id();
-            boardState.columns = DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] }));
-            boardState.projectTitle = 'Titulo del proyecto 1';
-            saveToLocalStorage();
-            window.history.replaceState({}, '', window.location.pathname + '?id=' + currentProjectId);
-        }
-    }
+    await loadFromLocalStorage();
 
     if (!isHome) {
         if (DOM.projectTitle) DOM.projectTitle.textContent = boardState.projectTitle;
         if (DOM.editorNavTitle) DOM.editorNavTitle.textContent = boardState.projectTitle;
         if (DOM.editorMainTitle) DOM.editorMainTitle.textContent = boardState.projectTitle;
-        updateNavbarProjectTitle();
+        await updateNavbarProjectTitle();
 
         renderBoard();
         initEditableFields();
@@ -1210,16 +1284,14 @@ function initBoard() {
         initEditor();
     } else {
         initSearchListeners();
-        renderHomeProjectsList();
+        await renderHomeProjectsList();
 
-        // Si se redireccionó a la Home pidiendo un nuevo proyecto (?new=1), se limpia la URL param y se levanta el modal
         const params = new URLSearchParams(window.location.search);
         if (params.get('new') === '1') {
             window.history.replaceState({}, '', window.location.pathname);
             promptCreateProject();
         }
 
-        // Listener para interceptar clics en triggers de creación de proyectos y levantar el modal sin recargar página si se está en la Home
         document.addEventListener('click', e => {
             const trigger = e.target.closest('#sidebar-new-project, #card-new-project');
             if (trigger) {

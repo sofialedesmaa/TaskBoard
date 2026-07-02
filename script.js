@@ -70,17 +70,31 @@ function cacheDOMSelectors() {
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const id = () => `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
+// NUEVA: Retorna la clave de localStorage específica para el usuario logueado en base a su token
+function getProjectsStorageKey() {
+    const token = localStorage.getItem('token_mediaPila');
+    return token ? `katban_projects_${token}` : 'katban_projects';
+}
+
+// MODIFICADO: Guarda los cambios del proyecto activo respetando la nueva estructura { id, titulo, imagen, columnas }
 const saveToLocalStorage = () => {
     if (!currentProjectId) return;
-    let projects = JSON.parse(localStorage.getItem('katban_projects')) || [];
+    let projects = getNormalizedProjects();
     let idx = projects.findIndex(p => p.id === currentProjectId);
     if (idx >= 0) {
-        projects[idx].state = boardState;
+        projects[idx].titulo = boardState.projectTitle;
+        projects[idx].columnas = boardState.columns;
         projects[idx].lastModified = Date.now();
     } else {
-        projects.push({ id: currentProjectId, state: boardState, lastModified: Date.now() });
+        projects.push({
+            id: currentProjectId,
+            titulo: boardState.projectTitle,
+            imagen: '',
+            columnas: boardState.columns,
+            lastModified: Date.now()
+        });
     }
-    localStorage.setItem('katban_projects', JSON.stringify(projects));
+    localStorage.setItem(getProjectsStorageKey(), JSON.stringify(projects));
 };
 const byId = (items, itemId) => items.find(item => item.id === itemId);
 const make = (tag, className = '', html = '') => {
@@ -120,42 +134,162 @@ function logout() {
 /* ============================================================
    5. FUNCIONES — Persistencia
    ============================================================ */
+// MODIFICADO: Retorna los proyectos de ejemplo solicitados para primer ingreso (Café Aurora, TechNova, WalletPro) con sus tareas, prioridades y deadlines
+function getDemoProjects() {
+    const defaultCols = [
+        { name: 'Brief', colorClass: 'colorBrief' },
+        { name: 'En proceso', colorClass: 'colorProceso' },
+        { name: 'Revisión del cliente', colorClass: 'colorRevision' },
+        { name: 'Aprobado', colorClass: 'colorAprobado' }
+    ];
+
+    const demo = [
+        {
+            titulo: 'Rebranding Café Aurora',
+            imagen: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&auto=format&fit=crop&q=80',
+            tasksByColumn: {
+                'Brief': [
+                    { title: 'Definir concepto visual de la nueva marca', labels: ['Logo'], priority: 'Media', dueDate: '2026-07-04', description: '' }
+                ],
+                'En proceso': [
+                    { title: 'Diseñar primeras propuestas de logotipo', labels: ['Logo'], priority: 'Alta', dueDate: '2026-07-07', description: '' },
+                    { title: 'Crear paleta de colores corporativa', labels: ['Logo'], priority: 'Media', dueDate: '2026-07-08', description: '' }
+                ],
+                'Revisión del cliente': [
+                    { title: 'Ajustar isotipo según comentarios del cliente', labels: ['Logo'], priority: 'Alta', dueDate: '2026-07-10', description: '' }
+                ],
+                'Aprobado': [
+                    { title: 'Entregar manual básico de identidad', labels: ['Logo'], priority: 'Baja', dueDate: '2026-07-12', description: '' }
+                ]
+            }
+        },
+        {
+            titulo: 'Landing Page TechNova',
+            imagen: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80',
+            tasksByColumn: {
+                'Brief': [
+                    { title: 'Analizar requerimientos UX', labels: ['UI'], priority: 'Media', dueDate: '2026-07-05', description: '' }
+                ],
+                'En proceso': [
+                    { title: 'Wireframes de escritorio', labels: ['UI'], priority: 'Alta', dueDate: '2026-07-09', description: '' },
+                    { title: 'Diseño responsive mobile', labels: ['UI'], priority: 'Alta', dueDate: '2026-07-11', description: '' }
+                ],
+                'Revisión del cliente': [
+                    { title: 'Correcciones de navegación solicitadas', labels: ['UI'], priority: 'Muy Alta', dueDate: '2026-07-13', description: '' }
+                ],
+                'Aprobado': [
+                    { title: 'Diseño final aprobado', labels: ['UI'], priority: 'Baja', dueDate: '2026-07-15', description: '' }
+                ]
+            }
+        },
+        {
+            titulo: 'App Financiera WalletPro',
+            imagen: 'https://images.unsplash.com/photo-1559526324-5f3de0f0d410?w=600&auto=format&fit=crop&q=80',
+            tasksByColumn: {
+                'Brief': [
+                    { title: 'Reunión inicial con producto', labels: ['UI'], priority: 'Media', dueDate: '2026-07-04', description: '' }
+                ],
+                'En proceso': [
+                    { title: 'Dashboard principal', labels: ['UI'], priority: 'Alta', dueDate: '2026-07-08', description: '' },
+                    { title: 'Pantalla de movimientos', labels: ['UI'], priority: 'Media', dueDate: '2026-07-10', description: '' }
+                ],
+                'Revisión del cliente': [
+                    { title: 'Ajustar componentes según feedback', labels: ['UI'], priority: 'Muy Alta', dueDate: '2026-07-12', description: '' }
+                ],
+                'Aprobado': [
+                    { title: 'Sistema visual aprobado', labels: ['UI'], priority: 'Baja', dueDate: '2026-07-14', description: '' }
+                ]
+            }
+        }
+    ];
+
+    return demo.map((p, index) => {
+        const columns = defaultCols.map(col => {
+            const rawTasks = p.tasksByColumn[col.name] || [];
+            const tasks = rawTasks.map(t => ({
+                id: id(),
+                title: t.title,
+                labels: t.labels,
+                dueDate: t.dueDate,
+                description: t.description || '',
+                priority: t.priority
+            }));
+            return {
+                id: id(),
+                name: col.name,
+                colorClass: col.colorClass,
+                tasks: tasks
+            };
+        });
+
+        return {
+            id: id(),
+            titulo: p.titulo,
+            imagen: p.imagen,
+            columnas: columns,
+            lastModified: Date.now() - (index * 1000)
+        };
+    });
+}
+
+// MODIFICADO: Recupera y normaliza los proyectos guardados en localStorage para garantizar compatibilidad con formatos heredados (state)
+function getNormalizedProjects() {
+    const key = getProjectsStorageKey();
+    let projects = JSON.parse(localStorage.getItem(key)) || [];
+    let needsSave = false;
+
+    projects = projects.map(p => {
+        if (p.titulo !== undefined && p.columnas !== undefined) {
+            return p;
+        }
+
+        needsSave = true;
+        return {
+            id: p.id || id(),
+            titulo: (p.state && p.state.projectTitle) || 'Sin título',
+            imagen: p.imagen || '',
+            columnas: (p.state && p.state.columns) || DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] })),
+            lastModified: p.lastModified || Date.now()
+        };
+    });
+
+    if (needsSave) {
+        localStorage.setItem(key, JSON.stringify(projects));
+    }
+    return projects;
+}
+
+// MODIFICADO: Migra el antiguo estado a la nueva estructura unificada
 function migrateOldData() {
     let oldState = localStorage.getItem('taskboard_state');
-    let projects = JSON.parse(localStorage.getItem('katban_projects')) || [];
+    const key = getProjectsStorageKey();
+    let projects = JSON.parse(localStorage.getItem(key)) || [];
     if (oldState) {
         try {
             let parsedOld = JSON.parse(oldState);
-            projects.push({ id: id(), state: parsedOld, lastModified: Date.now() });
+            projects.push({
+                id: id(),
+                titulo: parsedOld.projectTitle || 'Sin título',
+                imagen: '',
+                columnas: parsedOld.columns || [],
+                lastModified: Date.now()
+            });
             localStorage.removeItem('taskboard_state');
-            localStorage.setItem('katban_projects', JSON.stringify(projects));
+            localStorage.setItem(key, JSON.stringify(projects));
         } catch (e) {}
     }
 }
 
+// MODIFICADO: Carga el proyecto activo utilizando la nueva estructura { id, titulo, columnas, imagen }
 function loadFromLocalStorage() {
     migrateOldData();
-    let projects = JSON.parse(localStorage.getItem('katban_projects')) || [];
+    const key = getProjectsStorageKey();
+    let projects = getNormalizedProjects();
     
-    // Si no hay ningún proyecto, precargar los que el usuario espera ver
+    // Si no hay ningún proyecto, precargar los de demostración
     if (projects.length === 0) {
-        projects.push({
-            id: id(),
-            state: {
-                columns: DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] })),
-                projectTitle: 'Título del proyecto 1'
-            },
-            lastModified: Date.now() + 1000 // Para que aparezca primero
-        });
-        projects.push({
-            id: id(),
-            state: {
-                columns: DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] })),
-                projectTitle: 'Título del proyecto 2'
-            },
-            lastModified: Date.now()
-        });
-        localStorage.setItem('katban_projects', JSON.stringify(projects));
+        projects = getDemoProjects();
+        localStorage.setItem(key, JSON.stringify(projects));
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -164,18 +298,8 @@ function loadFromLocalStorage() {
     if (isHome) return true;
 
     if (params.get('new') === '1') {
-        const newProjId = id();
-        const newState = {
-            columns: DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] })),
-            projectTitle: 'Titulo del proyecto 1'
-        };
-        projects.push({ id: newProjId, state: newState, lastModified: Date.now() });
-        localStorage.setItem('katban_projects', JSON.stringify(projects));
-        
-        window.history.replaceState({}, '', window.location.pathname + '?id=' + newProjId);
-        currentProjectId = newProjId;
-        boardState = newState;
-        return true;
+        window.location.href = 'home.html?new=1';
+        return false;
     }
 
     let reqId = params.get('id');
@@ -183,8 +307,10 @@ function loadFromLocalStorage() {
         let proj = projects.find(p => p.id === reqId);
         if (proj) {
             currentProjectId = proj.id;
-            boardState = proj.state;
-            if (!boardState.projectTitle) boardState.projectTitle = 'Titulo del proyecto 1';
+            boardState = {
+                columns: proj.columnas || [],
+                projectTitle: proj.titulo || 'Sin título'
+            };
             normalizeDefaultColumnNames();
             return true;
         }
@@ -193,9 +319,11 @@ function loadFromLocalStorage() {
     if (projects.length > 0) {
         projects.sort((a,b) => (b.lastModified || 0) - (a.lastModified || 0));
         currentProjectId = projects[0].id;
-        boardState = projects[0].state;
+        boardState = {
+            columns: projects[0].columnas || [],
+            projectTitle: projects[0].titulo || 'Sin título'
+        };
         window.history.replaceState({}, '', window.location.pathname + '?id=' + currentProjectId);
-        if (!boardState.projectTitle) boardState.projectTitle = 'Titulo del proyecto 1';
         normalizeDefaultColumnNames();
         return true;
     }
@@ -203,6 +331,7 @@ function loadFromLocalStorage() {
     return false;
 }
 
+// MODIFICADO: Normaliza los nombres de columnas para que coincidan con los del sistema y guarda los cambios
 function normalizeDefaultColumnNames() {
     boardState.columns.forEach(column => {
         if (['Revision', 'Revisión'].includes(column.name)) column.name = 'Revisión del cliente';
@@ -878,16 +1007,17 @@ function initEditor() {
     renderEditorTasks();
 }
 
+// MODIFICADO: Renderiza las tarjetas de proyectos en la Home utilizando la nueva estructura de datos, soportando imágenes de portada o color seleccionado, eliminación de proyectos y enlazando la creación de proyectos
 function renderHomeProjectsList() {
     const projectsContainer = document.getElementById('projects-container');
     if (!projectsContainer) return;
     
-    let projects = JSON.parse(localStorage.getItem('katban_projects')) || [];
+    let projects = getNormalizedProjects();
     projects.sort((a,b) => (b.lastModified || 0) - (a.lastModified || 0)); // más recientes primero
     
     const btnNewProjectHTML = `
         <a class="project-card-new d-flex flex-column align-items-center justify-content-center gap-3 py-4 text-decoration-none"
-            href="board.html?new=1">
+            href="home.html?new=1" id="card-new-project">
             <div class="new-project-icon rounded-circle d-flex align-items-center justify-content-center">
                 <i class="bi bi-plus"></i>
             </div>
@@ -899,29 +1029,159 @@ function renderHomeProjectsList() {
     const pastelColors = ['#7F9C96', '#b5c68a', '#e3c27f', '#d8a7a7', '#9fb8d0', '#bca3cc'];
     
     projects.forEach((proj, index) => {
-        let title = proj.state.projectTitle || 'Sin título';
-        let tasks = proj.state.columns ? proj.state.columns.flatMap(c => c.tasks) : [];
+        let title = proj.titulo || 'Sin título';
+        let tasks = proj.columnas ? proj.columnas.flatMap(c => c.tasks) : [];
         let total = tasks.length;
         let color = pastelColors[index % pastelColors.length];
         
+        let coverStyle = '';
+        let coverClassExtra = '';
+        
+        if (proj.imagen) {
+            coverStyle = `background-image: url('${proj.imagen}'); background-size: cover; background-position: center;`;
+        } else if (proj.color) {
+            if (proj.color.startsWith('#')) {
+                coverStyle = `background-color: ${proj.color};`;
+            } else {
+                coverClassExtra = proj.color; // Clase del CSS (ej: bg-brief-pastel)
+            }
+        } else {
+            coverStyle = `background-color: ${color};`;
+        }
+        
         projectsContainer.innerHTML += `
-            <a href="board.html?id=${proj.id}" class="project-card card border-0 overflow-hidden text-decoration-none text-reset">
-                <div class="project-card-cover" style="background-color: ${color};"></div>
-                <div class="card-body p-3">
-                    <p class="card-title small fw-semibold text-truncate mb-2">${title}</p>
-                    <div class="d-flex align-items-center flex-wrap gap-2">
-                        <span class="small text-secondary">Tareas</span>
-                        <span class="small text-muted d-flex align-items-center gap-1"><span
-                            class="stat-dot rounded-circle d-inline-block bg-success"></span> ${total}</span>
+            <div class="project-card card border-0 overflow-hidden position-relative">
+                <button class="btn btn-sm btn-light position-absolute end-0 top-0 m-2 rounded-circle shadow-sm btn-delete-project border-0"
+                    data-project-id="${proj.id}" data-project-title="${title.replace(/"/g, '&quot;')}" title="Eliminar proyecto" style="z-index: 10; opacity: 0.9; width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-trash text-danger" style="font-size: 0.85rem;"></i>
+                </button>
+                <a href="board.html?id=${proj.id}" class="text-decoration-none text-reset">
+                    <div class="project-card-cover ${coverClassExtra}" style="${coverStyle}"></div>
+                    <div class="card-body p-3">
+                        <p class="card-title small fw-semibold text-truncate mb-2">${title}</p>
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <span class="small text-secondary">Tareas</span>
+                            <span class="small text-muted d-flex align-items-center gap-1"><span
+                                class="stat-dot rounded-circle d-inline-block bg-success"></span> ${total}</span>
+                        </div>
                     </div>
-                </div>
-            </a>
+                </a>
+            </div>
         `;
     });
     
     projectsContainer.innerHTML += btnNewProjectHTML;
+
+    // Registra eventos para la eliminación de tableros
+    document.querySelectorAll('.btn-delete-project').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            const projId = btn.dataset.projectId;
+            const projTitle = btn.dataset.projectTitle;
+            if (confirm(`¿Estás seguro de que querés eliminar el proyecto "${projTitle}"? Esta acción no se puede deshacer.`)) {
+                let projects = getNormalizedProjects();
+                projects = projects.filter(p => p.id !== projId);
+                localStorage.setItem(getProjectsStorageKey(), JSON.stringify(projects));
+                renderHomeProjectsList();
+            }
+        });
+    });
 }
 
+// NUEVA: Despliega un modal interactivo de creación de proyecto pidiendo nombre, URL de imagen o color de portada (de los definidos en CSS)
+function promptCreateProject() {
+    $('#createProjectModal')?.remove();
+    const modalEl = make('div', 'modal fade', `
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-3">
+        <div class="modal-header navbarColor text-white">
+          <h5 class="modal-title fw-semibold">Crear Proyecto</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="new-project-title" class="form-label fw-medium">Nombre del proyecto</label>
+            <input type="text" class="form-control" id="new-project-title" placeholder="Ej: Rebranding Café Aurora">
+            <div class="invalid-feedback">Ingresá un nombre para el proyecto.</div>
+          </div>
+          <div class="mb-3">
+            <label for="new-project-image" class="form-label fw-medium">URL de la imagen del proyecto</label>
+            <input type="url" class="form-control" id="new-project-image" placeholder="Ej: https://images.unsplash.com/...">
+            <div class="form-text text-muted small">Colocá el enlace de la imagen o dejalo vacío para usar el color seleccionado abajo.</div>
+          </div>
+          <p class="form-label fw-medium mb-2">Color de portada (si no ingresás una URL de imagen)</p>
+          <div class="d-flex flex-wrap justify-content-center gap-4 mb-3">
+            ${COLORS.map((color, i) => `
+              <input type="radio" class="btn-check" name="new-project-color" id="project-color-${i}" value="${color}" ${i ? '' : 'checked'}>
+              <label class="color-swatch rounded-circle ${color} border border-${i ? 'secondary' : 'primary border-3 shadow'}" for="project-color-${i}" title="${color}" aria-label="${color}"></label>`).join('')}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn navbarColor text-white border-secondary" id="btn-save-project">Crear proyecto</button>
+        </div>
+      </div>
+    </div>`);
+    modalEl.id = 'createProjectModal';
+    modalEl.tabIndex = -1;
+    document.body.appendChild(modalEl);
+
+    const modal = new bootstrap.Modal(modalEl);
+    const inputTitle = $('#new-project-title', modalEl);
+    const inputImage = $('#new-project-image', modalEl);
+    const saveBtn = $('#btn-save-project', modalEl);
+    const colorInputs = $$('input[name="new-project-color"]', modalEl);
+
+    // Dibuja los bordes de selección de forma idéntica al modal de columnas
+    const paintColors = () => colorInputs.forEach(input => {
+        const label = $(`label[for="${input.id}"]`, modalEl);
+        ['border-primary', 'border-3', 'shadow'].forEach(cls => label.classList.toggle(cls, input.checked));
+        label.classList.toggle('border-secondary', !input.checked);
+    });
+
+    colorInputs.forEach(input => $(`label[for="${input.id}"]`, modalEl).addEventListener('click', () => (input.checked = true, paintColors())));
+
+    const save = () => {
+        const title = inputTitle.value.trim();
+        if (!title) {
+            inputTitle.classList.add('is-invalid');
+            inputTitle.focus();
+            return;
+        }
+        
+        const imageUrl = inputImage.value.trim();
+        const selectedColorInput = $('input[name="new-project-color"]:checked', modalEl);
+        const selectedColor = selectedColorInput ? selectedColorInput.value : COLORS[0];
+        const newProjId = id();
+        
+        let projects = getNormalizedProjects();
+        const newProject = {
+            id: newProjId,
+            titulo: title,
+            imagen: imageUrl,
+            color: selectedColor,
+            columnas: DEFAULT_COLUMNS.map(([name, colorClass]) => ({ id: id(), name, colorClass, tasks: [] })),
+            lastModified: Date.now()
+        };
+        projects.push(newProject);
+        localStorage.setItem(getProjectsStorageKey(), JSON.stringify(projects));
+        
+        modal.hide();
+        window.location.href = `board.html?id=${newProjId}`;
+    };
+
+    saveBtn.addEventListener('click', save);
+    inputTitle.addEventListener('input', () => inputTitle.classList.remove('is-invalid'));
+    inputTitle.addEventListener('keydown', e => e.key === 'Enter' && (e.preventDefault(), save()));
+    inputImage.addEventListener('keydown', e => e.key === 'Enter' && (e.preventDefault(), save()));
+    
+    modalEl.addEventListener('shown.bs.modal', () => inputTitle.focus());
+    modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
+    modal.show();
+}
+
+// MODIFICADO: Inicialización de la app, adaptada para controlar la intercepción de URL params para creación y listeners sin recarga en la Home
 function initBoard() {
     cacheDOMSelectors();
     initSession();
@@ -951,6 +1211,22 @@ function initBoard() {
     } else {
         initSearchListeners();
         renderHomeProjectsList();
+
+        // Si se redireccionó a la Home pidiendo un nuevo proyecto (?new=1), se limpia la URL param y se levanta el modal
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('new') === '1') {
+            window.history.replaceState({}, '', window.location.pathname);
+            promptCreateProject();
+        }
+
+        // Listener para interceptar clics en triggers de creación de proyectos y levantar el modal sin recargar página si se está en la Home
+        document.addEventListener('click', e => {
+            const trigger = e.target.closest('#sidebar-new-project, #card-new-project');
+            if (trigger) {
+                e.preventDefault();
+                promptCreateProject();
+            }
+        });
     }
 }
 

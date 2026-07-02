@@ -1,110 +1,110 @@
 <!DOCTYPE html>
 <html lang="es">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de Proyectos</title>
-    <link rel="icon" type="image/png" href="LOGO.png">
-    <!-- FUENTES -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Editor de Proyectos</title>
+        <link rel="icon" type="image/png" href="LOGO.png">
+        <!-- FUENTES -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- BOOTSTRAP -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <!-- ESTILO CSS -->
-    <link rel="stylesheet" href="style.css">
-</head>
+        <!-- BOOTSTRAP -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+            integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+        <!-- ESTILO CSS -->
+        <link rel="stylesheet" href="style.css">
+    </head>
 
-<body class="bg-editor">
+    <body class="bg-editor">
 
-    <header class="text-white p-3 mb-4 shadow-sm custom-navbar">
-        <div class="container-fluid d-flex justify-content-between align-items-center">
-            <span class="fs-6 text-white-50">
-                <a href="home.html" class="nav-link-custom">Mis proyectos</a>
-                > <strong class="text-white" id="nombre-proyecto-nav">Título del proyecto</strong>
-            </span>
-            <div
-                class="rounded-circle bg-light overflow-hidden d-flex align-items-center justify-content-center logo-container">
-                <img src="assets/LOGO.png" alt="Logo Katban" class="logo-img">
-            </div>
-        </div>
-    </header>
-
-    <main class="container-fluid my-4">
-        <div class="row">
-
-            <section class="col-md-8 px-4">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0 fw-bold" id="nombre-proyecto-main">TITULO DEL PROYECTO</h2>
-                    <a href="board.html" class="btn px-4 py-2 fw-semibold text-white btn-cancelar small rounded-3 shadow-sm">Volver al tablero</a>
+        <header class="text-white p-3 mb-4 shadow-sm custom-navbar">
+            <div class="container-fluid d-flex justify-content-between align-items-center">
+                <span class="fs-6 text-white-50">
+                    <a href="home.html" class="nav-link-custom">Mis proyectos</a>
+                    > <strong class="text-white" id="nombre-proyecto-nav">Título del proyecto</strong>
+                </span>
+                <div
+                    class="rounded-circle bg-light overflow-hidden d-flex align-items-center justify-content-center logo-container">
+                    <img src="assets/LOGO.png" alt="Logo Katban" class="logo-img">
                 </div>
+            </div>
+        </header>
 
-                <form id="form-tarea">
-                    <div class="mb-3">
-                        <label for="titulo-tarea" class="form-label fw-semibold">Título de la tarea</label>
-                        <input type="text" class="form-control bg-light py-2 rounded-3" id="titulo-tarea"
-                            placeholder="Ej: Diseñar banner para Instagram" required>
+        <main class="container-fluid my-4">
+            <div class="row">
+
+                <section class="col-md-8 px-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="mb-0 fw-bold" id="nombre-proyecto-main">TITULO DEL PROYECTO</h2>
+                        <a href="board.html" class="btn px-4 py-2 fw-semibold text-white btn-cancelar small rounded-3 shadow-sm">Volver al tablero</a>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <label for="fecha-tarea" class="form-label fw-semibold">Fecha de vencimiento</label>
-                            <input type="date" class="form-control bg-light py-2 rounded-3" id="fecha-tarea">
+                    <form id="form-tarea">
+                        <div class="mb-3">
+                            <label for="titulo-tarea" class="form-label fw-semibold">Título de la tarea</label>
+                            <input type="text" class="form-control bg-light py-2 rounded-3" id="titulo-tarea"
+                                placeholder="Ej: Diseñar banner para Instagram" required>
                         </div>
-                    </div>
 
-                    <div class="row mb-4">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <label for="tipo-pieza" class="form-label fw-semibold">Tipo de pieza</label>
-                            <select class="form-select bg-light py-2 select-placeholder rounded-3" id="tipo-pieza"
-                                required onchange="checkPlaceholder(this)">
-                                <option value="" selected disabled class="placeholder-option">Seleccionar</option>
-                                <option value="logo">Logo</option>
-                                <option value="banner">Banner</option>
-                                <option value="redes">Redes</option>
-                                <option value="ui">UI</option>
-                                <option value="otro">Otro</option>
-                            </select>
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <label for="fecha-tarea" class="form-label fw-semibold">Fecha de vencimiento</label>
+                                <input type="date" class="form-control bg-light py-2 rounded-3" id="fecha-tarea">
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label for="estado-tarea" class="form-label fw-semibold">Estado ▽</label>
-                            <select class="form-select bg-light py-2 select-placeholder rounded-3" id="estado-tarea"
-                                onchange="checkPlaceholder(this)">
-                                <option value="" selected disabled class="placeholder-option">Seleccionar</option>
-                                <option value="brief">Brief</option>
-                                <option value="proceso">En proceso</option>
-                                <option value="revision">Revisión del cliente</option>
-                                <option value="aprobado">Aprobado</option>
-                            </select>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <label for="tipo-pieza" class="form-label fw-semibold">Tipo de pieza</label>
+                                <select class="form-select bg-light py-2 select-placeholder rounded-3" id="tipo-pieza"
+                                    required onchange="checkPlaceholder(this)">
+                                    <option value="" selected disabled class="placeholder-option">Seleccionar</option>
+                                    <option value="logo">Logo</option>
+                                    <option value="banner">Banner</option>
+                                    <option value="redes">Redes</option>
+                                    <option value="ui">UI</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="estado-tarea" class="form-label fw-semibold">Estado ▽</label>
+                                <select class="form-select bg-light py-2 select-placeholder rounded-3" id="estado-tarea"
+                                    onchange="checkPlaceholder(this)">
+                                    <option value="" selected disabled class="placeholder-option">Seleccionar</option>
+                                    <option value="brief">Brief</option>
+                                    <option value="proceso">En proceso</option>
+                                    <option value="revision">Revisión del cliente</option>
+                                    <option value="aprobado">Aprobado</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="d-flex justify-content-center gap-3 mt-4">
-                        <button type="button"
-                            class="btn px-4 py-2 fw-semibold text-white btn-cancelar small rounded-3 shadow-sm">Cancelar</button>
-                        <button type="submit"
-                            class="btn px-4 py-2 fw-semibold text-white btn-crear small rounded-3 shadow-sm">Crear
-                            tarea</button>
-                    </div>
-                </form>
-            </section>
+                        <div class="d-flex justify-content-center gap-3 mt-4">
+                            <button type="button"
+                                class="btn px-4 py-2 fw-semibold text-white btn-cancelar small rounded-3 shadow-sm">Cancelar</button>
+                            <button type="submit"
+                                class="btn px-4 py-2 fw-semibold text-white btn-crear small rounded-3 shadow-sm">Crear
+                                tarea</button>
+                        </div>
+                    </form>
+                </section>
 
-            <aside class="col-md-4 border-start ps-4">
-                <h3 class="text-center fs-5 fw-bold mb-4">MIS TAREAS</h3>
+                <aside class="col-md-4 border-start ps-4">
+                    <h3 class="text-center fs-5 fw-bold mb-4">MIS TAREAS</h3>
 
-                <div id="lista-tareas" class="d-flex flex-column gap-3"></div>
-            </aside>
+                    <div id="lista-tareas" class="d-flex flex-column gap-3"></div>
+                </aside>
 
-        </div>
-    </main>
+            </div>
+        </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-        crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+            crossorigin="anonymous"></script>
 
-    <script src="script.js"></script>
-</body>
+        <script src="script.js"></script>
+    </body>
 
 </html>
